@@ -1,0 +1,51 @@
+# Supabase CLI configuration.
+#
+# Only the settings this boilerplate depends on are listed. Everything else is
+# left at the CLI's defaults — run `supabase init` in a scratch directory if you
+# want the fully commented reference file.
+#
+# https://supabase.com/docs/guides/local-development/cli/config
+
+project_id = "polish"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true
+# Avatars and logos are capped at 10 MiB by the buckets themselves; this is the
+# ceiling for the whole storage API.
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+# Where magic links and OAuth come back to. Change for production, and add every
+# origin you sign in from to additional_redirect_urls.
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+# Magic links only — there are no passwords in this app.
+enable_confirmations = false
+
+[auth.external.google]
+enabled = false
+client_id = ""
+secret = ""
+redirect_uri = ""

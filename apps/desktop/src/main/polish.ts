@@ -1,0 +1,171 @@
+import { app, clipboard, Notification } from "electron"
+import { livePrompts, preserveSurroundingWhitespace, type Prompt } from "@polish/shared"
+
+import { rewrite, PolishError } from "./llm"
+import { getSecret } from "./secrets"
+import {
+  captureSelection,
+  pasteClipboard,
+  restoreClipboard,
+  type ClipboardSnapshot,
+} from "./selection"
+import { store } from "./store"
+import { getPickerWindow, hideHud, showHud, showMainWindow, showPicker } from "./windows"
+
+export const API_KEY_SECRET = "anthropic-api-key"
+
+/**
+ * The whole point of the app, start to finish: copy the selection, rewrite it,
+ * paste the result over it, give the clipboard back.
+ *
+ * One at a time. A second press while a request is in flight is ignored rather
+ * than queued — queuing would paste into wherever focus has moved since.
+ */
+let busy = false
+
+function setStatus(kind: "working" | "done" | "error", label: string) {
+  if (kind === "error") {
+    // The HUD is easy to miss; errors also go to a notification when it is off.
+    if (!store.state.settings.showHud && Notification.isSupported()) {
+      new Notification({ title: "Polish", body: label, silent: true }).show()
+    }
+  }
+  if (store.state.settings.showHud) showHud({ kind, label })
+  else if (kind !== "error") hideHud()
+}
+
+function apiKeyOrPrompt(): string | null {
+  const apiKey = getSecret(API_KEY_SECRET)
+  if (!apiKey) {
+    setStatus("error", "Add your Anthropic API key to start polishing.")
+    showMainWindow()
+  }
+  return apiKey
+}
+
+/** Run by a prompt's own shortcut: the selection is still in the focused app. */
+export async function polishWithShortcut(promptId: string) {
+  const prompt = findPrompt(promptId)
+  if (!prompt || busy || !apiKeyOrPrompt()) return
+  busy = true
+  try {
+    const { text, previous } = await captureSelection(prompt.shortcut)
+    if (text === null) {
+      setStatus("error", "Select some text first.")
+      return
+    }
+    await polishAndPaste(prompt, text, previous, prompt.shortcut)
+  } finally {
+    busy = false
+  }
+}
+
+/* ------------------------------------------------------------- picker ---- */
+
+/**
+ * The picker copies first and asks second: once the picker window opens it has
+ * focus, and there is no selection left to copy.
+ */
+let pending: { text: string; previous: ClipboardSnapshot } | null = null
+
+export async function openPicker() {
+  if (busy || !apiKeyOrPrompt()) return
+  busy = true
+  let opened = false
+  try {
+    const { text, previous } = await captureSelection(store.state.settings.pickerShortcut)
+    if (text === null) {
+      setStatus("error", "Select some text first.")
+      return
+    }
+    pending = { text, previous }
+    showPicker()
+    opened = true
+  } finally {
+    // Once open, the picker holds `busy` until a prompt is chosen or it is dismissed.
+    if (!opened) busy = false
+  }
+}
+
+export async function choosePickerPrompt(promptId: string) {
+  const prompt = findPrompt(promptId)
+  const captured = pending
+  pending = null
+  await closePicker()
+  if (!prompt || !captured) {
+    busy = false
+    return
+  }
+  try {
+    // Nothing is held down by now, so there are no modifiers to release.
+    await polishAndPaste(prompt, captured.text, captured.previous, null)
+  } finally {
+    busy = false
+  }
+}
+
+export async function cancelPicker() {
+  // Hiding the picker after a choice blurs it, which reports a cancel too;
+  // by then the choice has taken `pending`, so there is nothing to undo.
+  const captured = pending
+  if (!captured) return
+  pending = null
+  await closePicker()
+  await restoreClipboard(captured.previous)
+  busy = false
+}
+
+/** Hides the picker and gives focus back to the app the text came from. */
+async function closePicker() {
+  const picker = getPickerWindow()
+  if (!picker.isVisible()) return
+  picker.hide()
+  // macOS does not hand focus back to the previous app on its own.
+  if (process.platform === "darwin") app.hide()
+  await new Promise((resolve) => setTimeout(resolve, 120))
+}
+
+/* ------------------------------------------------------------- shared ---- */
+
+async function polishAndPaste(prompt: Prompt, text: string, previous: ClipboardSnapshot, accelerator: string | null) {
+  const { settings } = store.state
+  const apiKey = getSecret(API_KEY_SECRET)
+  if (!apiKey) return
+
+  setStatus("working", `${prompt.name}…`)
+  try {
+    const result = await rewrite({ apiKey, model: settings.model, instructions: prompt.instructions, text })
+    const output = preserveSurroundingWhitespace(text, result)
+    await clipboard.writeText(output)
+
+    if (settings.autoPaste) {
+      await pasteClipboard(accelerator)
+      if (settings.restoreClipboard) {
+        // The target app reads the clipboard asynchronously after the keystroke;
+        // swapping it back too soon would paste the old contents instead.
+        setTimeout(() => void restoreClipboard(previous), 500)
+      }
+      setStatus("done", "Done")
+    } else {
+      setStatus("done", "Copied — paste it wherever you like")
+    }
+  } catch (error) {
+    await restoreClipboard(previous)
+    setStatus("error", error instanceof PolishError ? error.message : "Something went wrong.")
+    if (!(error instanceof PolishError)) console.error(error)
+  }
+}
+
+/** For the "Try it" box in the app: no clipboard, no keystrokes. */
+export async function tryPrompt(promptId: string, text: string): Promise<string> {
+  const prompt = findPrompt(promptId)
+  if (!prompt) throw new PolishError("That prompt no longer exists.")
+  const apiKey = getSecret(API_KEY_SECRET)
+  if (!apiKey) throw new PolishError("Add your Anthropic API key first.")
+  const result = await rewrite({ apiKey, model: store.state.settings.model, instructions: prompt.instructions, text })
+  return preserveSurroundingWhitespace(text, result)
+}
+
+function findPrompt(id: string): Prompt | undefined {
+  return livePrompts(store.state.prompts).find((p) => p.id === id)
+}

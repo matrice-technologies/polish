@@ -1,0 +1,21 @@
+{
+  "name": "@polish/shared",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "description": "What the desktop app and the web app must agree on: the shape of a prompt, the synced settings, shortcuts, and how two copies merge.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,109 @@
+import { app, globalShortcut, Menu, Tray } from "electron"
+import { formatAccelerator, livePrompts } from "@polish/shared"
+
+import { initAccount, onAccountChange, scheduleSync, sync } from "./account"
+import { trayIcon } from "./icon"
+import { appState, broadcastState, registerIpc } from "./ipc"
+import { openPicker, polishWithShortcut } from "./polish"
+import { applyShortcuts, isPaused, onShortcutsToggled, setPaused } from "./shortcuts"
+import { store } from "./store"
+import { getMainWindow, showMainWindow, warmUpWindows } from "./windows"
+
+/**
+ * Polish lives in the tray. The window is only for setting prompts up; the
+ * work happens through global shortcuts while some other app has focus.
+ */
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on("second-instance", () => showMainWindow())
+  void app.whenReady().then(start)
+}
+
+let tray: Tray | null = null
+const SYNC_EVERY_MS = 5 * 60 * 1000
+
+async function start() {
+  if (process.platform === "win32") app.setAppUserModelId("com.matricetechnologies.polish")
+  // A tray app has no dock presence on macOS until its window is open.
+  if (process.platform === "darwin") app.dock?.hide()
+
+  store.load()
+  registerIpc()
+
+  store.on("change", (source) => {
+    applyShortcuts()
+    refreshTray()
+    broadcastState()
+    if (source === "user") scheduleSync()
+  })
+  const refreshAll = () => {
+    refreshTray()
+    broadcastState()
+  }
+  onAccountChange(refreshAll)
+  onShortcutsToggled(refreshAll)
+
+  applyShortcuts()
+  tray = new Tray(trayIcon())
+  tray.setToolTip("Polish")
+  tray.on("click", () => showMainWindow())
+  refreshTray()
+
+  warmUpWindows()
+  await initAccount()
+  setInterval(() => void sync(), SYNC_EVERY_MS)
+
+  // Coming back to the window is a good moment to pick up edits made on the web.
+  app.on("browser-window-focus", (_event, window) => {
+    if (window === getMainWindow()) scheduleSync(0)
+  })
+
+  // First run, or launched by hand rather than at login: show the window.
+  if (!app.getLoginItemSettings().wasOpenedAtLogin) showMainWindow()
+}
+
+function refreshTray() {
+  if (!tray) return
+  const { platform, shortcutErrors } = appState()
+  const prompts = livePrompts(store.state.prompts)
+  const paused = isPaused()
+
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: "Open Polish", click: () => showMainWindow() },
+      {
+        label: "Prompt picker",
+        accelerator: store.state.settings.pickerShortcut ?? undefined,
+        registerAccelerator: false,
+        click: () => void openPicker(),
+      },
+      { type: "separator" },
+      ...prompts.map((prompt) => ({
+        label: prompt.shortcut && !shortcutErrors[prompt.id]
+          ? `${prompt.name}    ${formatAccelerator(prompt.shortcut, platform)}`
+          : prompt.name,
+        // From the tray, focus is on the menu, not the text: run it on what
+        // is selected once the menu has closed and focus has gone back.
+        click: () => setTimeout(() => void polishWithShortcut(prompt.id), 200),
+      })),
+      { type: "separator" },
+      { label: "Pause shortcuts", type: "checkbox", checked: paused, click: () => setPaused(!paused) },
+      { type: "separator" },
+      { label: "Quit Polish", role: "quit" },
+    ]),
+  )
+  tray.setToolTip(paused ? "Polish — shortcuts paused" : "Polish")
+}
+
+app.on("window-all-closed", () => {
+  // Stay alive in the tray; quitting is explicit.
+})
+
+app.on("activate", () => showMainWindow())
+
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll()
+  store.flush()
+})

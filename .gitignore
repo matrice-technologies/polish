@@ -1,0 +1,27 @@
+# dependencies
+node_modules
+
+# builds
+.next/
+out/
+dist/
+release/
+*.tsbuildinfo
+next-env.d.ts
+
+# env files — never commit these
+.env
+.env.*
+!.env.example
+
+# Google OAuth client secret, dropped at the root for the deploy agent
+client_secret_*.json
+
+# supabase
+supabase/.temp/
+supabase/.branches/
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*

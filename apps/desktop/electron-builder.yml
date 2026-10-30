@@ -1,0 +1,24 @@
+appId: com.matricetechnologies.polish
+productName: Polish
+directories:
+  buildResources: resources
+  output: release/${version}
+files:
+  - out/**
+  - package.json
+# Native addon: must sit outside the asar to be loadable.
+asarUnpack:
+  - "**/node_modules/uiohook-napi/**"
+win:
+  target: nsis
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target: dmg
+  category: public.app-category.productivity
+  extendInfo:
+    NSAppleEventsUsageDescription: Polish copies your selection and pastes the result back.
+linux:
+  target: AppImage
+  category: Utility
