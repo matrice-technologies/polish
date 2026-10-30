@@ -56,7 +56,7 @@ export function DownloadButtons({ links, className }: { links: DownloadLinks | n
         : null
 
   const others = [
-    links.windows && { href: links.windows, label: "Windows", hint: "x64 and Arm" },
+    links.windows && { href: links.windows, label: "Windows", hint: "64-bit" },
     links.macArm64 && { href: links.macArm64, label: "macOS", hint: "Apple Silicon" },
     links.macX64 && { href: links.macX64, label: "macOS", hint: "Intel" },
   ].filter(Boolean) as { href: string; label: string; hint: string }[]

@@ -32,8 +32,10 @@ publish:
 
 win:
   target:
+    # x64 only: Arm Windows PCs run it under Windows' built-in emulation, and
+    # bundling both architectures doubled the installer to ~230 MB.
     - target: nsis
-      arch: [x64, arm64]
+      arch: [x64]
   artifactName: Polish-Setup-${version}.${ext}
 nsis:
   # Like VS Code's User Setup: per-user, no admin prompt, no wizard, and the

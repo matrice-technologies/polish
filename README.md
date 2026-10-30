@@ -166,8 +166,8 @@ To release:
 1. Bump `version` in `apps/desktop/package.json`.
 2. Push a matching tag: `git tag v0.2.0 && git push origin v0.2.0`.
 
-`.github/workflows/release-desktop.yml` then builds Windows (x64 and Arm64,
-one per-user installer) and macOS (Apple Silicon and Intel; DMG to install,
+`.github/workflows/release-desktop.yml` then builds Windows (one per-user x64
+installer, which Arm PCs run under emulation) and macOS (Apple Silicon and Intel; DMG to install,
 ZIP for updates) into a draft release, and publishes it once every platform
 has uploaded. The download page at `/download` and the landing page pick up
 the new version within five minutes.
