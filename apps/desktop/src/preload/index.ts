@@ -32,6 +32,8 @@ const api: PolishApi = {
   setRecording: (recording) => ipcRenderer.send(IPC.setRecording, recording),
   setPaused: (paused) => ipcRenderer.send(IPC.setPaused, paused),
   requestAccessibility: () => ipcRenderer.send(IPC.requestAccessibility),
+  checkForUpdates: () => ipcRenderer.invoke(IPC.checkForUpdates),
+  installUpdate: () => ipcRenderer.send(IPC.installUpdate),
 
   startLink: () => ipcRenderer.invoke(IPC.startLink),
   cancelLink: () => ipcRenderer.invoke(IPC.cancelLink),

@@ -8,6 +8,7 @@ import type { AppState } from "../../common/types"
 
 import { Logo } from "@/components/logo"
 import { TitleBarSlot } from "@/components/page-header"
+import { UpdateBanner } from "@/components/update-banner"
 import {
   Sidebar,
   SidebarContent,
@@ -121,6 +122,7 @@ function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter className="gap-1 pb-3">
+        <UpdateBanner update={state.update} />
         <SidebarGroupLabel>Status</SidebarGroupLabel>
         <StatusRow
           tone={state.ai.ready ? "ok" : "warn"}

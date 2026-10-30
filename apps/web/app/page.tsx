@@ -3,9 +3,11 @@ import { redirect } from "next/navigation"
 import { ArrowRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { DownloadButtons } from "@/components/download-buttons"
 import { Logo } from "@/components/logo"
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/app"
 import { listMemberships } from "@/lib/auth"
+import { latestRelease } from "@/lib/releases"
 import { createClient } from "@/lib/supabase/server"
 
 /**
@@ -25,16 +27,23 @@ export default async function Page() {
     redirect(`/${memberships[0].workspaceSlug}/prompts`)
   }
 
+  const release = await latestRelease()
+
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-2xl flex-col items-center justify-center px-6 text-center">
-      <Logo className="size-10" />
-      <h1 className="font-heading mt-6 text-3xl font-semibold text-balance">{APP_NAME}</h1>
-      <p className="text-muted-foreground mt-3 text-sm/relaxed text-pretty">{APP_DESCRIPTION}</p>
+      <Logo className="size-12" />
+      <h1 className="font-heading mt-6 text-3xl font-semibold tracking-tight text-balance">{APP_NAME}</h1>
+      <p className="text-muted-foreground mt-3 max-w-md text-sm/relaxed text-pretty">
+        {APP_DESCRIPTION} For Windows and macOS, with your Claude plan or any API key.
+      </p>
 
-      <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Button size="lg" render={<Link href="/login" />}>
+      <DownloadButtons links={release} className="mt-8" />
+
+      <div className="mt-10 flex flex-col items-center gap-2 border-t pt-6">
+        <p className="text-muted-foreground text-xs">Already using Polish? Sign in to sync your prompts.</p>
+        <Button variant="outline" size="sm" render={<Link href="/login" />}>
           Sign in
-          <ArrowRight className="size-4" />
+          <ArrowRight className="size-3.5" />
         </Button>
       </div>
     </main>

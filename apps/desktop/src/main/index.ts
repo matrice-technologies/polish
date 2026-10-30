@@ -9,6 +9,7 @@ import { appState, broadcastState, registerIpc } from "./ipc"
 import { openPicker, polishWithShortcut } from "./polish"
 import { applyShortcuts, isPaused, onShortcutsToggled, setPaused } from "./shortcuts"
 import { store } from "./store"
+import { checkForUpdates, installUpdate, onUpdateStatusChange, startUpdater, updateStatus } from "./updater"
 import { getMainWindow, showMainWindow, warmUpWindows } from "./windows"
 
 /**
@@ -47,6 +48,7 @@ async function start() {
   onAccountChange(refreshAll)
   onShortcutsToggled(refreshAll)
   onCliStatusChange(refreshAll)
+  onUpdateStatusChange(refreshAll)
 
   applyShortcuts()
   tray = new Tray(trayIcon())
@@ -55,6 +57,7 @@ async function start() {
   refreshTray()
 
   warmUpWindows()
+  startUpdater()
   void pickProvider()
   await initAccount()
   setInterval(() => void sync(), SYNC_EVERY_MS)
@@ -90,6 +93,7 @@ function refreshTray() {
 
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      ...updateMenuItems(),
       { label: "Open Polish", click: () => showMainWindow() },
       {
         label: "Prompt picker",
@@ -109,10 +113,26 @@ function refreshTray() {
       { type: "separator" },
       { label: "Pause shortcuts", type: "checkbox", checked: paused, click: () => setPaused(!paused) },
       { type: "separator" },
+      {
+        label: "Check for updates…",
+        enabled: app.isPackaged,
+        click: () => {
+          showMainWindow()
+          void checkForUpdates()
+        },
+      },
+      { label: `Polish ${app.getVersion()}`, enabled: false },
       { label: "Quit Polish", role: "quit" },
     ]),
   )
   tray.setToolTip(paused ? "Polish — shortcuts paused" : "Polish")
+}
+
+/** "Restart to update" leads the tray menu once an update has downloaded. */
+function updateMenuItems(): Electron.MenuItemConstructorOptions[] {
+  const update = updateStatus()
+  if (update.state !== "ready") return []
+  return [{ label: `Restart to update to ${update.version}`, click: () => installUpdate() }, { type: "separator" }]
 }
 
 app.on("window-all-closed", () => {

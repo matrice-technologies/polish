@@ -33,12 +33,22 @@ export interface AppState {
   account: AccountStatus
   /** macOS only: synthetic copy/paste needs the Accessibility permission. */
   accessibility: "granted" | "missing" | "not-needed"
+  update: UpdateStatus
 }
 
 export type HudStatus =
   | { kind: "working"; label: string }
   | { kind: "done"; label: string }
   | { kind: "error"; label: string }
+
+/** Where the self-updater is; see src/main/updater.ts. */
+export type UpdateStatus =
+  | { state: "unsupported"; reason: string }
+  | { state: "idle"; lastCheck: string | null }
+  | { state: "checking" }
+  | { state: "downloading"; version: string; percent: number }
+  | { state: "ready"; version: string }
+  | { state: "error"; message: string; lastCheck: string }
 
 export interface PickerItem {
   id: string
@@ -75,6 +85,9 @@ export interface PolishApi {
   setRecording(recording: boolean): void
   setPaused(paused: boolean): void
   requestAccessibility(): void
+  checkForUpdates(): Promise<void>
+  /** Quits, installs the downloaded update, and relaunches. */
+  installUpdate(): void
 
   startLink(): Promise<void>
   cancelLink(): Promise<void>
@@ -111,6 +124,8 @@ export const IPC = {
   setRecording: "shortcuts:recording",
   setPaused: "shortcuts:paused",
   requestAccessibility: "accessibility:request",
+  checkForUpdates: "update:check",
+  installUpdate: "update:install",
   startLink: "account:link",
   cancelLink: "account:cancel-link",
   signOut: "account:sign-out",

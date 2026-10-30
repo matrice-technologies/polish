@@ -19,6 +19,7 @@ import { cancelPicker, choosePickerPrompt, tryPrompt } from "./polish"
 import { accessibilityStatus, requestAccessibility } from "./selection"
 import { isPaused, setPaused, setRecording, shortcutErrors } from "./shortcuts"
 import { store } from "./store"
+import { checkForUpdates, installUpdate, updateStatus } from "./updater"
 
 const platform: Platform = process.platform === "darwin" ? "mac" : process.platform === "win32" ? "windows" : "linux"
 
@@ -34,6 +35,7 @@ export function appState(): AppState {
     shortcutsPaused: isPaused(),
     account: accountStatus(),
     accessibility: accessibilityStatus(),
+    update: updateStatus(),
   }
 }
 
@@ -164,6 +166,8 @@ export function registerIpc() {
   ipcMain.on(IPC.setRecording, (_event, recording: boolean) => setRecording(recording))
   ipcMain.on(IPC.setPaused, (_event, paused: boolean) => setPaused(paused))
   ipcMain.on(IPC.requestAccessibility, () => requestAccessibility())
+  ipcMain.handle(IPC.checkForUpdates, () => checkForUpdates())
+  ipcMain.on(IPC.installUpdate, () => installUpdate())
 
   ipcMain.handle(IPC.startLink, () => startLink())
   ipcMain.handle(IPC.cancelLink, () => cancelLink())

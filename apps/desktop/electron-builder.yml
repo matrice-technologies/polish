@@ -1,5 +1,6 @@
 appId: com.matricetechnologies.polish
 productName: Polish
+copyright: Copyright © 2026 Matrice Technologies
 directories:
   buildResources: resources
   output: release/${version}
@@ -7,6 +8,7 @@ files:
   - out/**
   - resources/**
   - "!resources/*.svg"
+  - "!resources/entitlements.mac.plist"
   - package.json
 # The native addon must sit outside the asar to be loadable, and the tray
 # icons are read from disk by the OS.
@@ -14,16 +16,58 @@ asarUnpack:
   - "**/node_modules/uiohook-napi/**"
   - resources/**
 icon: resources/icon.png
+# uiohook-napi is N-API and ships prebuilt binaries for every target here, so
+# there is nothing to compile — and cross-arch builds would fail if we tried.
+npmRebuild: false
+
+# Installed copies update themselves from GitHub Releases in this public repo
+# (artifacts only; the source stays private). See src/main/updater.ts.
+publish:
+  provider: github
+  owner: matrice-technologies
+  repo: polish-releases
+  # CI creates the release as a draft, every platform uploads into it, and it is
+  # published once all of them succeed (.github/workflows/release-desktop.yml).
+  releaseType: draft
+
 win:
-  target: nsis
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+  artifactName: Polish-Setup-${version}.${ext}
 nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
+  # Like VS Code's User Setup: per-user, no admin prompt, no wizard, and the
+  # app starts when it's done. Updates install the same way, silently.
+  oneClick: true
+  perMachine: false
+  runAfterFinish: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Polish
+  deleteAppDataOnUninstall: false
+
 mac:
-  target: dmg
+  target:
+    # dmg to install; zip is what the updater downloads.
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  artifactName: Polish-${version}-${arch}.${ext}
   category: public.app-category.productivity
+  # Hardened runtime is required for notarization. Signing and notarizing
+  # happen in CI when the Apple credentials are present.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+  notarize: false
   extendInfo:
     NSAppleEventsUsageDescription: Polish copies your selection and pastes the result back.
+dmg:
+  title: Polish ${version}
+  artifactName: Polish-${version}-${arch}.${ext}
+
 linux:
   target: AppImage
   category: Utility

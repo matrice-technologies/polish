@@ -1,7 +1,7 @@
-import { Settings, ShieldAlert } from "lucide-react"
+import { Loader2, RefreshCw, RotateCw, Settings, ShieldAlert } from "lucide-react"
 import { toast } from "sonner"
 import type { SyncedSettings } from "@polish/shared"
-import type { AppState } from "../../../common/types"
+import type { AppState, UpdateStatus } from "../../../common/types"
 
 import { AiProviderSection } from "@/components/ai-provider"
 import { PageHeader } from "@/components/page-header"
@@ -98,8 +98,54 @@ export function SettingsPage({ state }: { state: AppState }) {
           </div>
         </SettingsGroup>
 
-        <p className="mt-10 text-xs text-muted-foreground">Polish {state.version}</p>
+        <SettingsGroup title="Updates">
+          <SettingsRow label={`Polish ${state.version}`} description={updateDescription(state.update)}>
+            <UpdateAction update={state.update} />
+          </SettingsRow>
+        </SettingsGroup>
       </SettingsBody>
     </div>
+  )
+}
+
+function updateDescription(update: UpdateStatus): string {
+  switch (update.state) {
+    case "unsupported":
+      return update.reason
+    case "checking":
+      return "Checking for updates…"
+    case "downloading":
+      return `Downloading ${update.version} (${update.percent}%). It installs when you restart.`
+    case "ready":
+      return `Version ${update.version} is downloaded and ready.`
+    case "error":
+      return update.message
+    case "idle":
+      return update.lastCheck
+        ? `Up to date. Last checked at ${new Date(update.lastCheck).toLocaleTimeString()}.`
+        : "Polish checks for updates in the background and installs them when you restart."
+  }
+}
+
+function UpdateAction({ update }: { update: UpdateStatus }) {
+  if (update.state === "ready") {
+    return (
+      <Button size="sm" onClick={() => polish.installUpdate()}>
+        <RotateCw />
+        Restart to update
+      </Button>
+    )
+  }
+  const busy = update.state === "checking" || update.state === "downloading"
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={busy || update.state === "unsupported"}
+      onClick={() => void polish.checkForUpdates()}
+    >
+      {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+      Check for updates
+    </Button>
   )
 }

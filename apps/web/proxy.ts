@@ -48,7 +48,8 @@ export async function proxy(request: NextRequest) {
     pathname === "/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/invite")
+    pathname.startsWith("/invite") ||
+    pathname.startsWith("/download")
 
   if (!user && !isPublicRoute) {
     const redirectUrl = request.nextUrl.clone()

@@ -1,0 +1,118 @@
+# Builds the desktop app for Windows and macOS and publishes it to the public
+# matrice-technologies/polish-releases repo, which is where installed copies
+# look for updates and where the website's download page links to.
+#
+# Release: bump "version" in apps/desktop/package.json, then push a tag
+#   git tag desktop-v0.2.0 && git push origin desktop-v0.2.0
+#
+# Secrets (repository settings → Secrets and variables → Actions):
+#   POLISH_RELEASES_TOKEN        required. Fine-grained token with
+#                                Contents: read and write on polish-releases.
+#   MAC_CERTIFICATE_P12_BASE64   optional, with the four below: a Developer ID
+#   MAC_CERTIFICATE_PASSWORD     Application certificate (.p12, base64) and
+#   APPLE_ID                     the Apple account that notarizes. Without
+#   APPLE_APP_SPECIFIC_PASSWORD  them macOS builds are ad-hoc signed: they run
+#   APPLE_TEAM_ID                after a Gatekeeper warning and cannot update
+#                                themselves.
+
+name: Release desktop app
+
+on:
+  push:
+    tags: ["desktop-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-desktop
+  cancel-in-progress: false
+
+env:
+  RELEASES_REPO: matrice-technologies/polish-releases
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: version
+        name: Read the version
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/desktop-v* && "${GITHUB_REF#refs/tags/desktop-v}" != "$version" ]]; then
+            echo "::error::Tag ${GITHUB_REF#refs/tags/} does not match apps/desktop/package.json version $version"
+            exit 1
+          fi
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ secrets.POLISH_RELEASES_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "v$VERSION" --repo "$RELEASES_REPO" >/dev/null 2>&1; then
+            echo "v$VERSION already exists; uploading into it."
+          else
+            gh release create "v$VERSION" --repo "$RELEASES_REPO" --draft \
+              --title "Polish $VERSION" \
+              --notes "Download from https://polish.matricetechnologies.com/download. Installed copies update automatically."
+          fi
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        # MAIN_VITE_WEB_URL is left unset: release builds sign in through production.
+        run: npm run build --workspace @polish/desktop
+
+      - name: Package and upload (Windows)
+        if: runner.os == 'Windows'
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.POLISH_RELEASES_TOKEN }}
+        run: npx electron-builder --win --publish always
+
+      - name: Package and upload (macOS)
+        if: runner.os == 'macOS'
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.POLISH_RELEASES_TOKEN }}
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$CSC_LINK" ]; then
+            echo "Signing with the Developer ID certificate and notarizing."
+            npx electron-builder --mac --publish always -c.mac.notarize=true
+          else
+            echo "::warning::No Apple certificate: ad-hoc signing. This build shows a Gatekeeper warning and cannot auto-update."
+            unset CSC_LINK CSC_KEY_PASSWORD
+            CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --mac --publish always -c.mac.identity=-
+          fi
+
+  publish:
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.POLISH_RELEASES_TOKEN }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: gh release edit "v$VERSION" --repo "$RELEASES_REPO" --draft=false --latest

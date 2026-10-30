@@ -153,14 +153,39 @@ use the same paths.
 `apps/web/lib/database.types.ts` was extended by hand for these tables;
 regenerate it with `npm run db:types` once a local database is up.
 
-## Building the desktop app
+## Releasing the desktop app
 
-```bash
-npm run dist --workspace @polish/desktop
-```
+Polish is distributed from the public
+[`polish-releases`](https://github.com/matrice-technologies/polish-releases)
+repository (artifacts only), and installed copies update themselves from it,
+the way VS Code does: check at launch and every four hours, download in the
+background, then "Restart to update" in the sidebar, the tray menu and a
+notification. An update you don't restart for installs when Polish quits.
 
-electron-builder writes an NSIS installer, a DMG or an AppImage to
-`apps/desktop/release/`. Builds are unsigned.
+To release:
+
+1. Bump `version` in `apps/desktop/package.json`.
+2. Push a matching tag: `git tag desktop-v0.2.0 && git push origin desktop-v0.2.0`.
+
+`.github/workflows/release-desktop.yml` then builds Windows (x64 and Arm64,
+one per-user installer) and macOS (Apple Silicon and Intel; DMG to install,
+ZIP for updates) into a draft release, and publishes it once every platform
+has uploaded. The download page at `/download` and the landing page pick up
+the new version within five minutes.
+
+The workflow needs a repository secret `POLISH_RELEASES_TOKEN`, a
+fine-grained token with Contents read and write on `polish-releases`.
+
+**Signing.** macOS: with an Apple Developer ID certificate and an Apple ID for
+notarization in the secrets listed at the top of the workflow, builds are
+signed and notarized. Without them they are ad-hoc signed, which means a
+Gatekeeper warning on first open, and **no auto-update on macOS**, because
+macOS refuses to update an app it can't verify. Windows: unsigned builds work and update, but
+SmartScreen warns on first install until the app is signed (an EV
+certificate, or Azure Trusted Signing).
+
+Local builds: `npm run dist --workspace @polish/desktop` writes installers to
+`apps/desktop/release/` without publishing.
 
 ## Production
 
