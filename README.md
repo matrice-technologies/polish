@@ -9,10 +9,18 @@ result over the selection, then puts your clipboard back the way it was.
 Prompts without a shortcut are one keystroke away in the picker
 (`Ctrl+Shift+Space` / `⌘⇧Space` by default).
 
-It works entirely offline from the Polish server: no account, no sign-in, just
-your own Anthropic API key. Signing in is optional and only adds sync, so your
-prompts, shortcuts and settings follow you between machines and can be edited
-from the web.
+It works entirely offline from the Polish server: no account, no sign-in. Text
+goes from your computer straight to the model provider you pick:
+
+- **Your Claude subscription** (Pro or Max), through Claude Code installed on
+  the same machine. No API key.
+- **An API key** for Anthropic, OpenAI, Google Gemini or xAI Grok.
+- **Any OpenAI-compatible endpoint**: Ollama or LM Studio for fully local
+  models, OpenRouter, Groq, Mistral, DeepSeek…
+
+Signing in is optional and only adds sync, so your prompts, shortcuts and
+settings follow you between machines and can be edited from the web. The
+provider and its keys stay per-device.
 
 ## Layout
 
@@ -32,8 +40,9 @@ npm install
 npm run dev:desktop        # the Electron app, offline mode
 ```
 
-Add an Anthropic API key under **Settings**, select some text anywhere, and
-press `Ctrl+Shift+1`. On macOS, allow Polish under System Settings → Privacy &
+Pick a provider under **Settings → AI provider** (if Claude Code is installed
+and signed in, Polish starts on your subscription by itself), select some text
+anywhere, and press `Ctrl+Shift+1`. On macOS, allow Polish under System Settings → Privacy &
 Security → Accessibility first; without it the OS silently drops the copy and
 paste keystrokes.
 
@@ -61,14 +70,34 @@ copy, and waits for the sentinel to change. The result is written back the
 same way with paste, and the snapshot is restored half a second later, once
 the target app has read the paste. Keystrokes are posted with `uiohook-napi`.
 
-**The model call** (`llm.ts`, `packages/shared/src/polish.ts`). The prompt's
-instructions sit inside a fixed frame that says the user message is the
-selection, verbatim, to be rewritten and never answered, and that the reply
-replaces the selection, so it must be the text alone. Claude Opus 5.5 by
-default at low effort (Sonnet 5.5 and Haiku 5.5 are in settings), with
-`fallbacks: "default"` so a request a model's safety classifiers decline is
-retried server-side on the recommended fallback instead of failing. The API key
-is encrypted with the OS keychain (`safeStorage`) and never syncs.
+**The model call** (`apps/desktop/src/main/engines/`,
+`packages/shared/src/polish.ts`). The prompt's instructions sit inside a fixed
+frame that says the user message is the selection, verbatim, to be rewritten
+and never answered, and that the reply replaces the selection, so it must be
+the text alone. That frame is the system prompt for every provider:
+
+- `claude-cli.ts`: the subscription. Runs the person's own `claude` in print
+  mode (`-p --output-format json`) with the system prompt from a file, no
+  tools, no setting sources (so their hooks don't run), no MCP servers, no
+  saved session, in an empty working directory (so no CLAUDE.md is read), and
+  with `ANTHROPIC_API_KEY` removed from its environment so it bills the plan,
+  not the API. About two seconds per rewrite. `claude auth status --json` tells
+  Polish whether it is installed and signed in; signing in opens
+  `claude auth login` in a terminal window and Polish polls until it's done.
+  Models are Claude Code's aliases (`opus`, `sonnet`, `haiku`), which follow
+  whatever the installed Claude Code knows.
+- `anthropic.ts`: the Anthropic SDK. Claude Opus 5.5 by default at low effort,
+  with `fallbacks: "default"` so a request a model's safety classifiers decline
+  is retried server-side instead of failing.
+- `openai-compatible.ts`: one client for OpenAI, Gemini and xAI (both publish
+  OpenAI-compatible endpoints) and custom base URLs. Model lists come from each
+  provider's `/models`, so they don't go stale.
+
+Keys are encrypted with the OS keychain (`safeStorage`), one per provider, and
+never sync.
+
+If you ship Polish to other people, check Anthropic's terms on offering
+claude.ai login in a third-party product before relying on subscription mode.
 
 **Offline-first sync** (`account.ts`, `packages/shared/src/sync.ts`). The local
 JSON file is the source of truth. Prompts are merged one by one, newest

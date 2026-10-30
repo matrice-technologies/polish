@@ -5,7 +5,6 @@ import { Keyboard, Loader2, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import {
   formatAccelerator,
-  MODELS,
   shortcutConflicts,
   type Prompt,
   type SyncedSettings,
@@ -16,7 +15,6 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { ShortcutRecorder } from "@/components/shortcut-recorder"
@@ -190,8 +188,6 @@ function PromptDialog({ initial, isNew, onClose }: { initial: Draft; isNew: bool
   )
 }
 
-const MODEL_LABELS = Object.fromEntries(MODELS.map((m) => [m.id, m.label]))
-
 /**
  * Settings that follow the person to every machine. Each control saves the
  * moment it changes, like the rest of the app's settings.
@@ -233,31 +229,12 @@ function SettingsForm({ settings }: { settings: SyncedSettings }) {
         <h2 className="font-heading text-sm font-semibold">Desktop settings</h2>
         {pending ? <Loader2 className="text-muted-foreground size-3 animate-spin" /> : null}
       </div>
+      <p className="text-muted-foreground -mt-2 mb-5 text-xs">
+        These follow you to every computer. The AI provider (your Claude plan or an API key) is chosen in the desktop
+        app on each machine.
+      </p>
 
       <div className="space-y-5">
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
-          <div>
-            <Label htmlFor="setting-model">Model</Label>
-            <p className="text-muted-foreground text-xs">Used for every prompt. Your API key stays on each device.</p>
-          </div>
-          <Select
-            value={value.model}
-            items={MODEL_LABELS}
-            onValueChange={(model) => model && update({ model: model as SyncedSettings["model"] })}
-          >
-            <SelectTrigger id="setting-model" className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MODELS.map((m) => (
-                <SelectItem key={m.id} value={m.id}>
-                  {m.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
           <div>
             <Label htmlFor="setting-picker">Prompt picker</Label>

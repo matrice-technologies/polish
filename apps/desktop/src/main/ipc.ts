@@ -10,11 +10,12 @@ import {
   type SyncedSettings,
 } from "@polish/shared"
 
+import { providerInfo, type AiSettings, type ProviderId } from "../common/providers"
 import { IPC, type AppState, type DeviceSettings, type PickerItem, type Result } from "../common/types"
 import { accountStatus, cancelLink, signOut, startLink, sync } from "./account"
-import { PolishError } from "./llm"
-import { API_KEY_SECRET, cancelPicker, choosePickerPrompt, tryPrompt } from "./polish"
-import { deleteSecret, getSecret, setSecret } from "./secrets"
+import { aiStatus, listModels, PolishError, rewriteText, setProviderKey } from "./engines"
+import { cancelCliLogin, refreshCliStatus, startCliLogin } from "./engines/claude-cli"
+import { cancelPicker, choosePickerPrompt, tryPrompt } from "./polish"
 import { accessibilityStatus, requestAccessibility } from "./selection"
 import { isPaused, setPaused, setRecording, shortcutErrors } from "./shortcuts"
 import { store } from "./store"
@@ -28,7 +29,7 @@ export function appState(): AppState {
     prompts: livePrompts(store.state.prompts),
     settings: store.state.settings,
     device: store.state.device,
-    hasApiKey: Boolean(getSecret(API_KEY_SECRET)),
+    ai: aiStatus(),
     shortcutErrors: shortcutErrors(),
     shortcutsPaused: isPaused(),
     account: accountStatus(),
@@ -107,17 +108,50 @@ export function registerIpc() {
     store.update("sync", { device })
   })
 
-  ipcMain.handle(IPC.setApiKey, (_event, key: string | null): Result => {
-    const trimmed = key?.trim()
-    if (!trimmed) {
-      deleteSecret(API_KEY_SECRET)
-    } else {
-      if (!trimmed.startsWith("sk-ant-")) return { ok: false, message: "Anthropic API keys start with sk-ant-." }
-      setSecret(API_KEY_SECRET, trimmed)
+  ipcMain.handle(IPC.updateAi, async (_event, patch: Partial<AiSettings>) => {
+    const ai = { ...store.state.device.ai, ...patch, models: { ...store.state.device.ai.models, ...patch.models } }
+    store.aiUnset = false
+    store.update("sync", { device: { ...store.state.device, ai } })
+    if (patch.claudePath !== undefined || patch.provider === "claude-cli") await refreshCliStatus(ai.claudePath)
+  })
+
+  ipcMain.handle(IPC.setProviderKey, (_event, provider: ProviderId, key: string | null): Result => {
+    const trimmed = key?.trim() || null
+    if (trimmed && provider === "anthropic" && !trimmed.startsWith("sk-ant-")) {
+      return { ok: false, message: "Anthropic API keys start with sk-ant-." }
     }
+    if (trimmed && /\s/.test(trimmed)) return { ok: false, message: "That doesn't look like an API key." }
+    setProviderKey(provider, trimmed)
     broadcastState()
     return { ok: true, value: undefined }
   })
+
+  ipcMain.handle(IPC.listModels, async (_event, provider: ProviderId): Promise<Result<string[]>> => {
+    try {
+      return { ok: true, value: await listModels(provider) }
+    } catch (error) {
+      return { ok: false, message: error instanceof PolishError ? error.message : String(error) }
+    }
+  })
+
+  ipcMain.handle(IPC.testProvider, async (): Promise<Result<{ output: string; ms: number }>> => {
+    const started = Date.now()
+    try {
+      const output = await rewriteText({
+        instructions: "Fix spelling and grammar.",
+        text: "helo, this are a quick test of polish",
+      })
+      return { ok: true, value: { output, ms: Date.now() - started } }
+    } catch (error) {
+      return { ok: false, message: error instanceof PolishError ? error.message : String(error) }
+    }
+  })
+
+  ipcMain.handle(IPC.refreshCli, async () => {
+    await refreshCliStatus(store.state.device.ai.claudePath)
+  })
+  ipcMain.on(IPC.cliLogin, () => startCliLogin())
+  ipcMain.on(IPC.cliCancelLogin, () => cancelCliLogin())
 
   ipcMain.handle(IPC.tryPrompt, async (_event, id: string, text: string): Promise<Result<string>> => {
     try {

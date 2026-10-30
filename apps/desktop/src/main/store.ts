@@ -11,6 +11,7 @@ import {
   type SyncedSettings,
 } from "@polish/shared"
 
+import { PROVIDER_IDS, type AiSettings } from "../common/providers"
 import type { DeviceSettings } from "../common/types"
 
 /**
@@ -33,18 +34,47 @@ export type ChangeSource = "user" | "sync"
 
 const DEFAULT_WEB_URL = import.meta.env.MAIN_VITE_WEB_URL || "http://localhost:3000"
 
+const DEFAULT_AI: AiSettings = {
+  provider: "anthropic",
+  models: {},
+  customBaseUrl: "http://localhost:11434/v1",
+  claudePath: null,
+}
+
 function initialState(): LocalState {
   return {
     prompts: DEFAULT_PROMPTS,
     settings: DEFAULT_SETTINGS,
     settingsUpdatedAt: new Date(0).toISOString(),
-    device: { launchAtLogin: false, webUrl: DEFAULT_WEB_URL },
+    device: { launchAtLogin: false, webUrl: DEFAULT_WEB_URL, ai: DEFAULT_AI },
     connection: null,
+  }
+}
+
+/**
+ * AI settings as stored, with anything unknown dropped. Before providers
+ * existed the Anthropic model was a synced setting, so it is carried over.
+ */
+function parseAi(raw: unknown, legacyModel: unknown): AiSettings {
+  const ai = (raw && typeof raw === "object" ? raw : {}) as Partial<AiSettings>
+  const models = Object.fromEntries(
+    Object.entries(ai.models ?? {}).filter(
+      ([id, model]) => (PROVIDER_IDS as string[]).includes(id) && typeof model === "string",
+    ),
+  )
+  if (!models.anthropic && typeof legacyModel === "string") models.anthropic = legacyModel
+  return {
+    provider: ai.provider && PROVIDER_IDS.includes(ai.provider) ? ai.provider : DEFAULT_AI.provider,
+    models,
+    customBaseUrl: typeof ai.customBaseUrl === "string" ? ai.customBaseUrl : DEFAULT_AI.customBaseUrl,
+    claudePath: typeof ai.claudePath === "string" ? ai.claudePath : null,
   }
 }
 
 class Store extends EventEmitter<{ change: [ChangeSource] }> {
   state: LocalState = initialState()
+  /** True until a provider has been chosen on this machine, so startup can pick a sensible one. */
+  aiUnset = true
   private writeTimer: NodeJS.Timeout | null = null
 
   private get file() {
@@ -67,9 +97,10 @@ class Store extends EventEmitter<{ change: [ChangeSource] }> {
         prompts,
         settings: parseSettings(raw.settings),
         settingsUpdatedAt: typeof raw.settingsUpdatedAt === "string" ? raw.settingsUpdatedAt : base.settingsUpdatedAt,
-        device: { ...base.device, ...raw.device },
+        device: { ...base.device, ...raw.device, ai: parseAi(raw.device?.ai, raw.settings?.model) },
         connection: raw.connection ?? null,
       }
+      this.aiUnset = !raw.device?.ai
     } catch (error) {
       console.error("Could not read polish.json, starting fresh", error)
     }

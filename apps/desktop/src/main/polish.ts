@@ -1,8 +1,7 @@
 import { app, clipboard, Notification } from "electron"
 import { livePrompts, preserveSurroundingWhitespace, type Prompt } from "@polish/shared"
 
-import { rewrite, PolishError } from "./llm"
-import { getSecret } from "./secrets"
+import { aiStatus, PolishError, rewriteText } from "./engines"
 import {
   captureSelection,
   pasteClipboard,
@@ -11,8 +10,6 @@ import {
 } from "./selection"
 import { store } from "./store"
 import { getPickerWindow, hideHud, showHud, showMainWindow, showPicker } from "./windows"
-
-export const API_KEY_SECRET = "anthropic-api-key"
 
 /**
  * The whole point of the app, start to finish: copy the selection, rewrite it,
@@ -34,19 +31,20 @@ function setStatus(kind: "working" | "done" | "error", label: string) {
   else if (kind !== "error") hideHud()
 }
 
-function apiKeyOrPrompt(): string | null {
-  const apiKey = getSecret(API_KEY_SECRET)
-  if (!apiKey) {
-    setStatus("error", "Add your Anthropic API key to start polishing.")
+/** Whether a provider is set up; if not, says what is missing and opens the app. */
+function aiReadyOrPrompt(): boolean {
+  const { ready, problem } = aiStatus()
+  if (!ready) {
+    setStatus("error", `${problem ?? "Set up an AI provider."} Open Settings → AI provider.`)
     showMainWindow()
   }
-  return apiKey
+  return ready
 }
 
 /** Run by a prompt's own shortcut: the selection is still in the focused app. */
 export async function polishWithShortcut(promptId: string) {
   const prompt = findPrompt(promptId)
-  if (!prompt || busy || !apiKeyOrPrompt()) return
+  if (!prompt || busy || !aiReadyOrPrompt()) return
   busy = true
   try {
     const { text, previous } = await captureSelection(prompt.shortcut)
@@ -69,7 +67,7 @@ export async function polishWithShortcut(promptId: string) {
 let pending: { text: string; previous: ClipboardSnapshot } | null = null
 
 export async function openPicker() {
-  if (busy || !apiKeyOrPrompt()) return
+  if (busy || !aiReadyOrPrompt()) return
   busy = true
   let opened = false
   try {
@@ -129,12 +127,10 @@ async function closePicker() {
 
 async function polishAndPaste(prompt: Prompt, text: string, previous: ClipboardSnapshot, accelerator: string | null) {
   const { settings } = store.state
-  const apiKey = getSecret(API_KEY_SECRET)
-  if (!apiKey) return
 
   setStatus("working", `${prompt.name}…`)
   try {
-    const result = await rewrite({ apiKey, model: settings.model, instructions: prompt.instructions, text })
+    const result = await rewriteText({ instructions: prompt.instructions, text })
     const output = preserveSurroundingWhitespace(text, result)
     await clipboard.writeText(output)
 
@@ -160,9 +156,7 @@ async function polishAndPaste(prompt: Prompt, text: string, previous: ClipboardS
 export async function tryPrompt(promptId: string, text: string): Promise<string> {
   const prompt = findPrompt(promptId)
   if (!prompt) throw new PolishError("That prompt no longer exists.")
-  const apiKey = getSecret(API_KEY_SECRET)
-  if (!apiKey) throw new PolishError("Add your Anthropic API key first.")
-  const result = await rewrite({ apiKey, model: store.state.settings.model, instructions: prompt.instructions, text })
+  const result = await rewriteText({ instructions: prompt.instructions, text })
   return preserveSurroundingWhitespace(text, result)
 }
 

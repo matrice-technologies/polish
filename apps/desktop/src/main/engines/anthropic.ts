@@ -1,7 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk"
-import { buildSystemPrompt, type ModelId } from "@polish/shared"
 
-export class PolishError extends Error {}
+import { PolishError } from "./errors"
 
 /**
  * One rewrite: the prompt's instructions as the system prompt, the selection
@@ -14,16 +13,16 @@ export class PolishError extends Error {}
  * classifiers decline on the model Anthropic recommends for that case, rather
  * than handing back a refusal — on a model without fallbacks it is a no-op.
  */
-export async function rewrite({
+export async function anthropicRewrite({
   apiKey,
   model,
-  instructions,
+  system,
   text,
   signal,
 }: {
   apiKey: string
-  model: ModelId
-  instructions: string
+  model: string
+  system: string
   text: string
   signal?: AbortSignal
 }): Promise<string> {
@@ -35,7 +34,7 @@ export async function rewrite({
       {
         model,
         max_tokens: 16000,
-        system: buildSystemPrompt(instructions),
+        system,
         messages: [{ role: "user", content: text }],
         output_config: { effort: "low" },
         betas: ["server-side-fallback-2026-07-01"],
@@ -66,7 +65,7 @@ export async function rewrite({
 
 function describeError(error: unknown): string {
   if (error instanceof Anthropic.APIUserAbortError) return "Cancelled."
-  if (error instanceof Anthropic.AuthenticationError) return "Your Anthropic API key was rejected. Check it in Settings."
+  if (error instanceof Anthropic.AuthenticationError) return "Anthropic rejected the API key. Check it in Settings."
   if (error instanceof Anthropic.PermissionDeniedError) return "Your API key isn't allowed to use this model."
   if (error instanceof Anthropic.NotFoundError) return "That model isn't available to your API key."
   if (error instanceof Anthropic.RateLimitError) return "Rate limited by Anthropic. Wait a moment and try again."

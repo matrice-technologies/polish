@@ -88,10 +88,12 @@ test("shortcut conflicts include the picker", () => {
 })
 
 test("settings fall back field by field", () => {
-  const parsed = parseSettings({ autoPaste: false, model: "gpt-nope", pickerShortcut: "A" })
+  // `model` is a retired field from older rows: dropped, not an error.
+  const parsed = parseSettings({ autoPaste: false, showHud: "yes", model: "claude-opus-5-5", pickerShortcut: "A" })
   assert.equal(parsed.autoPaste, false)
-  assert.equal(parsed.model, DEFAULT_SETTINGS.model)
+  assert.equal(parsed.showHud, DEFAULT_SETTINGS.showHud)
   assert.equal(parsed.pickerShortcut, DEFAULT_SETTINGS.pickerShortcut)
+  assert.ok(!("model" in parsed))
 })
 
 test("keeps the selection's surrounding whitespace", () => {

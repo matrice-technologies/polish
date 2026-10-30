@@ -2,6 +2,8 @@ import { app, globalShortcut, Menu, Tray } from "electron"
 import { formatAccelerator, livePrompts } from "@polish/shared"
 
 import { initAccount, onAccountChange, scheduleSync, sync } from "./account"
+import { getProviderKey } from "./engines"
+import { onCliStatusChange, refreshCliStatus } from "./engines/claude-cli"
 import { trayIcon } from "./icon"
 import { appState, broadcastState, registerIpc } from "./ipc"
 import { openPicker, polishWithShortcut } from "./polish"
@@ -44,6 +46,7 @@ async function start() {
   }
   onAccountChange(refreshAll)
   onShortcutsToggled(refreshAll)
+  onCliStatusChange(refreshAll)
 
   applyShortcuts()
   tray = new Tray(trayIcon())
@@ -52,6 +55,7 @@ async function start() {
   refreshTray()
 
   warmUpWindows()
+  void pickProvider()
   await initAccount()
   setInterval(() => void sync(), SYNC_EVERY_MS)
 
@@ -62,6 +66,20 @@ async function start() {
 
   // First run, or launched by hand rather than at login: show the window.
   if (!app.getLoginItemSettings().wasOpenedAtLogin) showMainWindow()
+}
+
+/**
+ * Finds Claude Code, and on a machine where no provider was ever chosen,
+ * starts on the subscription if Claude Code is installed and no Anthropic key
+ * is saved: the setup that costs nothing extra.
+ */
+async function pickProvider() {
+  const cli = await refreshCliStatus(store.state.device.ai.claudePath)
+  if (!store.aiUnset) return
+  store.aiUnset = false
+  if (cli.state !== "missing" && !getProviderKey("anthropic")) {
+    store.update("sync", { device: { ...store.state.device, ai: { ...store.state.device.ai, provider: "claude-cli" } } })
+  }
 }
 
 function refreshTray() {

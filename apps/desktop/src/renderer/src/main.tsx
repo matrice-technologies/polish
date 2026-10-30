@@ -17,7 +17,7 @@ function App() {
   const [tab, setTab] = useState<Tab>("prompts")
   if (!state) return null
 
-  const needsSetup = !state.hasApiKey || state.accessibility === "missing"
+  const needsSetup = !state.ai.ready || state.accessibility === "missing"
   const items: { id: Tab; label: string; icon: typeof Sparkles; badge?: boolean }[] = [
     { id: "prompts", label: "Prompts", icon: Sparkles },
     { id: "settings", label: "Settings", icon: Settings, badge: needsSetup },

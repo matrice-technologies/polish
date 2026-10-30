@@ -186,13 +186,13 @@ function PromptEditor({
         </Button>
       </div>
 
-      {!isNew && initial.id ? <TryIt promptId={initial.id} hasApiKey={state.hasApiKey} dirty={dirty} /> : null}
+      {!isNew && initial.id ? <TryIt promptId={initial.id} aiProblem={state.ai.problem} dirty={dirty} /> : null}
     </div>
   )
 }
 
 /** Run the saved prompt on some sample text without leaving the app. */
-function TryIt({ promptId, hasApiKey, dirty }: { promptId: string; hasApiKey: boolean; dirty: boolean }) {
+function TryIt({ promptId, aiProblem, dirty }: { promptId: string; aiProblem: string | null; dirty: boolean }) {
   const [text, setText] = useState("")
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null)
   const [running, setRunning] = useState(false)
@@ -209,13 +209,13 @@ function TryIt({ promptId, hasApiKey, dirty }: { promptId: string; hasApiKey: bo
     <div className="bg-card space-y-3 rounded-lg border p-4">
       <div className="flex items-center justify-between">
         <p className="text-[13px] font-medium">Try it</p>
-        <Button size="sm" variant="outline" disabled={!text.trim() || running || !hasApiKey} onClick={() => void run()}>
+        <Button size="sm" variant="outline" disabled={!text.trim() || running || Boolean(aiProblem)} onClick={() => void run()}>
           {running ? <Loader2 className="animate-spin" /> : <Play />}
           Run
         </Button>
       </div>
       <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste some text to test this prompt on…" />
-      {!hasApiKey ? <p className="text-muted-foreground text-xs">Add your API key in Settings to try prompts.</p> : null}
+      {aiProblem ? <p className="text-muted-foreground text-xs">{aiProblem} See Settings → AI provider.</p> : null}
       {dirty ? <p className="text-muted-foreground text-xs">Runs the saved version of the prompt.</p> : null}
       {result ? (
         <p

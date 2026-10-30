@@ -1,5 +1,7 @@
 import type { Platform, Prompt, PromptInput, SyncedSettings } from "@polish/shared"
 
+import type { AiSettings, AiStatus, ProviderId } from "./providers"
+
 /** Shared by main, preload and renderer: the IPC surface and what crosses it. */
 
 export type Result<T = void> = { ok: true; value: T } | { ok: false; message: string }
@@ -9,6 +11,8 @@ export interface DeviceSettings {
   launchAtLogin: boolean
   /** The Polish web app this install signs in through. */
   webUrl: string
+  /** Which model provider this machine uses, and how to reach it. */
+  ai: AiSettings
 }
 
 export type AccountStatus =
@@ -22,7 +26,7 @@ export interface AppState {
   prompts: Prompt[]
   settings: SyncedSettings
   device: DeviceSettings
-  hasApiKey: boolean
+  ai: AiStatus
   /** Why a shortcut is not active, keyed by prompt id, or "picker". */
   shortcutErrors: Record<string, string>
   shortcutsPaused: boolean
@@ -51,7 +55,14 @@ export interface PolishApi {
   movePrompt(id: string, direction: -1 | 1): Promise<void>
   updateSettings(patch: Partial<SyncedSettings>): Promise<Result>
   updateDevice(patch: Partial<DeviceSettings>): Promise<void>
-  setApiKey(key: string | null): Promise<Result>
+  updateAi(patch: Partial<AiSettings>): Promise<void>
+  setProviderKey(provider: ProviderId, key: string | null): Promise<Result>
+  listModels(provider: ProviderId): Promise<Result<string[]>>
+  /** Rewrites a sample sentence with the selected provider, to prove it works. */
+  testProvider(): Promise<Result<{ output: string; ms: number }>>
+  refreshCli(): Promise<void>
+  cliLogin(): void
+  cliCancelLogin(): void
   /** Runs a prompt on text typed into the app, without touching the clipboard. */
   tryPrompt(id: string, text: string): Promise<Result<string>>
   /** Suspends global shortcuts while a shortcut field is recording. */
@@ -83,7 +94,13 @@ export const IPC = {
   movePrompt: "prompt:move",
   updateSettings: "settings:update",
   updateDevice: "device:update",
-  setApiKey: "apikey:set",
+  updateAi: "ai:update",
+  setProviderKey: "ai:set-key",
+  listModels: "ai:models",
+  testProvider: "ai:test",
+  refreshCli: "cli:refresh",
+  cliLogin: "cli:login",
+  cliCancelLogin: "cli:cancel-login",
   tryPrompt: "prompt:try",
   setRecording: "shortcuts:recording",
   setPaused: "shortcuts:paused",
