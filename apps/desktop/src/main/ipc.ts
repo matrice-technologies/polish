@@ -18,7 +18,7 @@ import { cancelCliLogin, refreshCliStatus, startCliLogin } from "./engines/claud
 import { cancelPicker, choosePickerPrompt, tryPrompt } from "./polish"
 import { accessibilityStatus, requestAccessibility } from "./selection"
 import { isPaused, setPaused, setRecording, shortcutErrors } from "./shortcuts"
-import { store } from "./store"
+import { DEFAULT_WEB_URL, store, webUrl } from "./store"
 import { checkForUpdates, installUpdate, updateStatus } from "./updater"
 
 const platform: Platform = process.platform === "darwin" ? "mac" : process.platform === "win32" ? "windows" : "linux"
@@ -30,6 +30,8 @@ export function appState(): AppState {
     prompts: livePrompts(store.state.prompts),
     settings: store.state.settings,
     device: store.state.device,
+    webUrl: webUrl(),
+    defaultWebUrl: DEFAULT_WEB_URL,
     ai: aiStatus(),
     shortcutErrors: shortcutErrors(),
     shortcutsPaused: isPaused(),
@@ -105,6 +107,11 @@ export function registerIpc() {
   })
 
   ipcMain.handle(IPC.updateDevice, (_event, patch: Partial<DeviceSettings>) => {
+    // A server is an http(s) URL typed by hand; anything else means the default.
+    if (patch.customServer !== undefined) {
+      const server = patch.customServer?.trim().replace(/\/+$/, "") ?? ""
+      patch = { ...patch, customServer: /^https?:\/\/\S+$/.test(server) ? server : null }
+    }
     const device = { ...store.state.device, ...patch }
     if (patch.launchAtLogin !== undefined) app.setLoginItemSettings({ openAtLogin: patch.launchAtLogin })
     store.update("sync", { device })

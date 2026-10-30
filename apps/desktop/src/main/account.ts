@@ -11,7 +11,7 @@ import {
 
 import type { AccountStatus } from "../common/types"
 import { sessionStorage } from "./secrets"
-import { store } from "./store"
+import { store, webUrl as serverUrl } from "./store"
 
 /**
  * The optional account. Signed out, nothing here runs and the app is entirely
@@ -84,7 +84,7 @@ export async function initAccount() {
 export async function startLink() {
   linkAbort?.abort()
   const abort = (linkAbort = new AbortController())
-  const webUrl = store.state.device.webUrl.replace(/\/$/, "")
+  const webUrl = serverUrl()
 
   try {
     const start = await fetch(`${webUrl}/api/desktop/link`, {

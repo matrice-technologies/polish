@@ -32,6 +32,10 @@ app.on("web-contents-created", (_event, contents) => {
   })
 })
 
+// A development build keeps its own data folder, so it never rewrites the
+// settings of a copy installed on the same machine (and can run beside it).
+if (!app.isPackaged) app.setPath("userData", `${app.getPath("userData")} Dev`)
+
 if (!app.requestSingleInstanceLock()) {
   app.quit()
 } else {

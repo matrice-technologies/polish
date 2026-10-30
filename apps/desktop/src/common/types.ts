@@ -9,8 +9,11 @@ export type Result<T = void> = { ok: true; value: T } | { ok: false; message: st
 /** Settings that belong to this machine and never sync. */
 export interface DeviceSettings {
   launchAtLogin: boolean
-  /** The Polish web app this install signs in through. */
-  webUrl: string
+  /**
+   * A server of your own (self-hosted, or local for development) to sign in
+   * through, or null for the one this build ships with.
+   */
+  customServer: string | null
   /** Which model provider this machine uses, and how to reach it. */
   ai: AiSettings
 }
@@ -26,6 +29,10 @@ export interface AppState {
   prompts: Prompt[]
   settings: SyncedSettings
   device: DeviceSettings
+  /** The Polish web app sign-in goes through: the custom server if set, else the default. */
+  webUrl: string
+  /** The server this build ships with: production, or local in development. */
+  defaultWebUrl: string
   ai: AiStatus
   /** Why a shortcut is not active, keyed by prompt id, or "picker". */
   shortcutErrors: Record<string, string>

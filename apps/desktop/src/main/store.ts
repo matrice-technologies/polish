@@ -32,8 +32,31 @@ export interface LocalState {
 /** "user" changes are new edits to upload; "sync" changes came from the account. */
 export type ChangeSource = "user" | "sync"
 
-// Production unless a build says otherwise (apps/desktop/.env for local development).
-const DEFAULT_WEB_URL = import.meta.env.MAIN_VITE_WEB_URL || "https://polish.matricetechnologies.com"
+const PRODUCTION_WEB_URL = "https://polish.matricetechnologies.com"
+
+/** Production unless a build says otherwise (apps/desktop/.env.development for local development). */
+export const DEFAULT_WEB_URL = import.meta.env.MAIN_VITE_WEB_URL || PRODUCTION_WEB_URL
+
+/** Where sign-in and sync go: the custom server if there is one. */
+export function webUrl(): string {
+  return (store.state.device.customServer ?? DEFAULT_WEB_URL).replace(/\/$/, "")
+}
+
+/**
+ * The custom server, if any. Up to 0.1.1 the server URL was always stored,
+ * default included, and development builds wrote theirs (http://localhost:3001)
+ * into the same folder an installed copy reads. So an old stored value that is
+ * production or that development default means "no custom server", and only a
+ * URL someone actually typed carries over.
+ */
+function parseCustomServer(device: Record<string, unknown> | undefined): string | null {
+  if (device && "customServer" in device) {
+    return typeof device.customServer === "string" ? device.customServer : null
+  }
+  const legacy = device?.webUrl
+  if (typeof legacy !== "string" || legacy === PRODUCTION_WEB_URL || legacy === "http://localhost:3001") return null
+  return legacy
+}
 
 const DEFAULT_AI: AiSettings = {
   provider: "anthropic",
@@ -47,7 +70,7 @@ function initialState(): LocalState {
     prompts: DEFAULT_PROMPTS,
     settings: DEFAULT_SETTINGS,
     settingsUpdatedAt: new Date(0).toISOString(),
-    device: { launchAtLogin: false, webUrl: DEFAULT_WEB_URL, ai: DEFAULT_AI },
+    device: { launchAtLogin: false, customServer: null, ai: DEFAULT_AI },
     connection: null,
   }
 }
@@ -98,7 +121,11 @@ class Store extends EventEmitter<{ change: [ChangeSource] }> {
         prompts,
         settings: parseSettings(raw.settings),
         settingsUpdatedAt: typeof raw.settingsUpdatedAt === "string" ? raw.settingsUpdatedAt : base.settingsUpdatedAt,
-        device: { ...base.device, ...raw.device, ai: parseAi(raw.device?.ai, raw.settings?.model) },
+        device: {
+          launchAtLogin: raw.device?.launchAtLogin === true,
+          customServer: parseCustomServer(raw.device),
+          ai: parseAi(raw.device?.ai, raw.settings?.model),
+        },
         connection: raw.connection ?? null,
       }
       this.aiUnset = !raw.device?.ai

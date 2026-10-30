@@ -7,6 +7,7 @@ import { SettingsBody, SettingsGroup, SettingsRow, SettingsTitle } from "@/compo
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import { polish } from "@/lib/polish"
 
 export function AccountPage({ state }: { state: AppState }) {
@@ -93,7 +94,7 @@ export function AccountPage({ state }: { state: AppState }) {
                 </Button>
               </SettingsRow>
               <SettingsRow label="Manage on the web" description="Edit prompts and settings from any browser.">
-                <Button variant="ghost" size="sm" onClick={() => polish.openExternal(state.device.webUrl)}>
+                <Button variant="ghost" size="sm" onClick={() => polish.openExternal(state.webUrl)}>
                   <ExternalLink />
                   Open
                 </Button>
@@ -102,32 +103,70 @@ export function AccountPage({ state }: { state: AppState }) {
           </SettingsGroup>
         ) : null}
 
-        <SettingsGroup title="Server" description="The Polish server this app signs in through.">
-          <ServerField webUrl={state.device.webUrl} disabled={account.state !== "signed-out"} />
+        <SettingsGroup title="Server" description="Where your account lives.">
+          <ServerSettings state={state} disabled={account.state !== "signed-out"} />
         </SettingsGroup>
       </SettingsBody>
     </div>
   )
 }
 
-/** For self-hosting and development. */
-function ServerField({ webUrl, disabled }: { webUrl: string; disabled: boolean }) {
-  const [value, setValue] = useState(webUrl)
-  const valid = /^https?:\/\/[^\s]+$/.test(value.trim())
+/**
+ * The official server unless you say otherwise: a self-hosted Polish, or one
+ * running on this computer for development.
+ */
+function ServerSettings({ state, disabled }: { state: AppState; disabled: boolean }) {
+  const saved = state.device.customServer
+  const [own, setOwn] = useState(saved !== null)
+  const [value, setValue] = useState(saved ?? "")
+  const server = value.trim().replace(/\/+$/, "")
+  const valid = /^https?:\/\/\S+$/.test(server)
+
+  function toggle(on: boolean) {
+    setOwn(on)
+    if (!on && saved !== null) void polish.updateDevice({ customServer: null })
+  }
+
+  const description =
+    own && saved ? (
+      <>
+        Signing in through <span className="font-mono">{saved}</span>.
+      </>
+    ) : own ? (
+      "Enter its address below, then save."
+    ) : (
+      <>
+        Signing in through <span className="font-mono">{new URL(state.defaultWebUrl).host}</span>.
+      </>
+    )
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <Input value={value} disabled={disabled} onChange={(e) => setValue(e.target.value)} className="font-mono" />
-        <Button
-          variant="outline"
-          disabled={disabled || !valid || value.trim() === webUrl}
-          onClick={() => void polish.updateDevice({ webUrl: value.trim().replace(/\/$/, "") })}
-        >
-          Save
-        </Button>
-      </div>
-      {disabled ? <p className="text-xs text-muted-foreground">Sign out to change the server.</p> : null}
+    <div className="divide-y">
+      <SettingsRow label="Use your own server" htmlFor="own-server" description={description}>
+        <Switch id="own-server" checked={own} disabled={disabled} onCheckedChange={toggle} />
+      </SettingsRow>
+      {own ? (
+        <div className="space-y-2 py-3">
+          <div className="flex gap-2">
+            <Input
+              value={value}
+              disabled={disabled}
+              placeholder="http://localhost:3000"
+              onChange={(e) => setValue(e.target.value)}
+              className="font-mono"
+            />
+            <Button
+              variant="outline"
+              disabled={disabled || !valid || server === saved}
+              onClick={() => void polish.updateDevice({ customServer: server })}
+            >
+              Save
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">The address of its web app, local ones included.</p>
+        </div>
+      ) : null}
+      {disabled ? <p className="pt-3 text-xs text-muted-foreground">Sign out to change the server.</p> : null}
     </div>
   )
 }
