@@ -8,8 +8,7 @@ import type { UpdateStatus } from "../common/types"
  * hours, download in the background, then offer "Restart to update". An update
  * nobody restarts for is installed when the app next quits.
  *
- * Releases come from GitHub Releases in matrice-technologies/polish-releases
- * (see electron-builder.yml). On macOS this only works for a signed build —
+ * Releases come from this repo's GitHub Releases (see electron-builder.yml). On macOS this only works for a signed build —
  * Squirrel.Mac refuses an update it cannot verify.
  */
 

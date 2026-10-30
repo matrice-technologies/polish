@@ -93,6 +93,7 @@ export async function startLink() {
       body: JSON.stringify({ deviceName: `Polish on ${hostname()}` }),
       signal: abort.signal,
     })
+    if (start.status === 429) throw new Error("Too many sign-in attempts. Try again in a few minutes.")
     if (!start.ok) throw new Error(`The Polish server answered ${start.status}.`)
     const link = (await start.json()) as {
       deviceCode: string
@@ -116,7 +117,7 @@ export async function startLink() {
         body: JSON.stringify({ deviceCode: link.deviceCode }),
         signal: abort.signal,
       })
-      if (poll.status === 202) continue
+      if (poll.status === 202 || poll.status === 429) continue
       if (poll.status === 410) throw new Error("That sign-in expired. Try again.")
       if (!poll.ok) throw new Error(`The Polish server answered ${poll.status}.`)
 

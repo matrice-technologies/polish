@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { clientIp, rateLimit } from "@/lib/rate-limit"
 import { createServiceClient } from "@/lib/supabase/server"
 import { hashSecret } from "@/lib/tokens"
 
@@ -20,6 +21,15 @@ const bodySchema = z.object({ deviceCode: z.string().min(20).max(200) })
  * Responses: 202 pending, 410 expired or already used, 200 approved.
  */
 export async function POST(request: NextRequest) {
+  // The app polls every two seconds; this leaves room for a few at once.
+  const limited = rateLimit(`poll:${clientIp(request)}`, 120, 60 * 1000)
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "retry-after": String(limited.retryAfter) } },
+    )
+  }
+
   const parsed = bodySchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: "invalid_request" }, { status: 400 })
 

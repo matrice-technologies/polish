@@ -1,14 +1,13 @@
-# Builds the desktop app for Windows and macOS and publishes it to the public
-# matrice-technologies/polish-releases repo, which is where installed copies
-# look for updates and where the website's download page links to.
+# Builds the desktop app for Windows and macOS and publishes it as a GitHub
+# Release of this repo, which is where installed copies look for updates and
+# where the website's download page links to.
 #
 # Release: bump "version" in apps/desktop/package.json, then push a tag
-#   git tag desktop-v0.2.0 && git push origin desktop-v0.2.0
+#   git tag v0.2.0 && git push origin v0.2.0
 #
-# Secrets (repository settings → Secrets and variables → Actions):
-#   POLISH_RELEASES_TOKEN        required. Fine-grained token with
-#                                Contents: read and write on polish-releases.
-#   MAC_CERTIFICATE_P12_BASE64   optional, with the four below: a Developer ID
+# Publishing uses the workflow's own GITHUB_TOKEN. Optional secrets
+# (repository settings → Secrets and variables → Actions):
+#   MAC_CERTIFICATE_P12_BASE64   with the four below: a Developer ID
 #   MAC_CERTIFICATE_PASSWORD     Application certificate (.p12, base64) and
 #   APPLE_ID                     the Apple account that notarizes. Without
 #   APPLE_APP_SPECIFIC_PASSWORD  them macOS builds are ad-hoc signed: they run
@@ -19,18 +18,19 @@ name: Release desktop app
 
 on:
   push:
-    tags: ["desktop-v*"]
+    tags: ["v*"]
   workflow_dispatch:
 
+# Creating and publishing releases.
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: release-desktop
   cancel-in-progress: false
 
 env:
-  RELEASES_REPO: matrice-technologies/polish-releases
+  RELEASES_REPO: ${{ github.repository }}
 
 jobs:
   prepare:
@@ -44,13 +44,13 @@ jobs:
         run: |
           version=$(node -p "require('./apps/desktop/package.json').version")
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if [[ "$GITHUB_REF" == refs/tags/desktop-v* && "${GITHUB_REF#refs/tags/desktop-v}" != "$version" ]]; then
+          if [[ "$GITHUB_REF" == refs/tags/v* && "${GITHUB_REF#refs/tags/v}" != "$version" ]]; then
             echo "::error::Tag ${GITHUB_REF#refs/tags/} does not match apps/desktop/package.json version $version"
             exit 1
           fi
       - name: Create the draft release
         env:
-          GH_TOKEN: ${{ secrets.POLISH_RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           if gh release view "v$VERSION" --repo "$RELEASES_REPO" >/dev/null 2>&1; then
@@ -84,14 +84,14 @@ jobs:
         if: runner.os == 'Windows'
         working-directory: apps/desktop
         env:
-          GH_TOKEN: ${{ secrets.POLISH_RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --win --publish always
 
       - name: Package and upload (macOS)
         if: runner.os == 'macOS'
         working-directory: apps/desktop
         env:
-          GH_TOKEN: ${{ secrets.POLISH_RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -113,6 +113,6 @@ jobs:
     steps:
       - name: Publish the release
         env:
-          GH_TOKEN: ${{ secrets.POLISH_RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.prepare.outputs.version }}
         run: gh release edit "v$VERSION" --repo "$RELEASES_REPO" --draft=false --latest

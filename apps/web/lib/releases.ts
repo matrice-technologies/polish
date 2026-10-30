@@ -1,15 +1,15 @@
 import "server-only"
 
 /**
- * The latest desktop release, from the public matrice-technologies/polish-releases
- * repo that CI publishes to and installed copies update from.
+ * The latest desktop release, from this repo's GitHub Releases, which CI
+ * publishes to and installed copies update from.
  *
  * Fetched from GitHub's API and cached for five minutes: unauthenticated calls
  * are rate-limited per server IP, and a new release can wait that long to show.
  */
-const LATEST = "https://api.github.com/repos/matrice-technologies/polish-releases/releases/latest"
+const LATEST = "https://api.github.com/repos/matrice-technologies/polish/releases/latest"
 
-export const RELEASES_PAGE = "https://github.com/matrice-technologies/polish-releases/releases/latest"
+export const RELEASES_PAGE = "https://github.com/matrice-technologies/polish/releases/latest"
 
 export interface DesktopRelease {
   version: string

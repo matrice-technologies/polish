@@ -1,4 +1,4 @@
-import { app, globalShortcut, Menu, Tray } from "electron"
+import { app, globalShortcut, Menu, shell, Tray } from "electron"
 import { formatAccelerator, livePrompts } from "@polish/shared"
 
 import { initAccount, onAccountChange, scheduleSync, sync } from "./account"
@@ -16,6 +16,21 @@ import { getMainWindow, showMainWindow, warmUpWindows } from "./windows"
  * Polish lives in the tray. The window is only for setting prompts up; the
  * work happens through global shortcuts while some other app has focus.
  */
+
+/**
+ * Electron's security checklist: the windows only ever show Polish's own pages.
+ * Nothing in them may navigate elsewhere or open new windows; a web link goes
+ * to the browser instead.
+ */
+app.on("web-contents-created", (_event, contents) => {
+  contents.on("will-navigate", (event, url) => {
+    if (url !== contents.getURL()) event.preventDefault()
+  })
+  contents.setWindowOpenHandler(({ url }) => {
+    if (/^https:\/\//.test(url)) void shell.openExternal(url)
+    return { action: "deny" }
+  })
+})
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()

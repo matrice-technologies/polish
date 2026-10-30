@@ -155,17 +155,16 @@ regenerate it with `npm run db:types` once a local database is up.
 
 ## Releasing the desktop app
 
-Polish is distributed from the public
-[`polish-releases`](https://github.com/matrice-technologies/polish-releases)
-repository (artifacts only), and installed copies update themselves from it,
-the way VS Code does: check at launch and every four hours, download in the
+Polish is distributed as this repository's
+[GitHub Releases](https://github.com/matrice-technologies/polish/releases), and
+installed copies update themselves from them, the way VS Code does: check at launch and every four hours, download in the
 background, then "Restart to update" in the sidebar, the tray menu and a
 notification. An update you don't restart for installs when Polish quits.
 
 To release:
 
 1. Bump `version` in `apps/desktop/package.json`.
-2. Push a matching tag: `git tag desktop-v0.2.0 && git push origin desktop-v0.2.0`.
+2. Push a matching tag: `git tag v0.2.0 && git push origin v0.2.0`.
 
 `.github/workflows/release-desktop.yml` then builds Windows (x64 and Arm64,
 one per-user installer) and macOS (Apple Silicon and Intel; DMG to install,
@@ -173,8 +172,7 @@ ZIP for updates) into a draft release, and publishes it once every platform
 has uploaded. The download page at `/download` and the landing page pick up
 the new version within five minutes.
 
-The workflow needs a repository secret `POLISH_RELEASES_TOKEN`, a
-fine-grained token with Contents read and write on `polish-releases`.
+Publishing uses the workflow's own `GITHUB_TOKEN`; no other secret is needed.
 
 **Signing.** macOS: with an Apple Developer ID certificate and an Apple ID for
 notarization in the secrets listed at the top of the workflow, builds are
@@ -187,20 +185,31 @@ certificate, or Azure Trusted Signing).
 Local builds: `npm run dist --workspace @polish/desktop` writes installers to
 `apps/desktop/release/` without publishing.
 
-## Production
+## Deploying
 
-| | |
-| --- | --- |
-| Web app | https://polish.matricetechnologies.com (Coolify project `polish`, app `polish-web`, built from `Dockerfile`) |
-| Supabase | https://supabase.polish.matricetechnologies.com: API, and the Studio dashboard behind basic auth (Coolify service `polish-supabase`) |
-| DNS | A records `polish` and `supabase.polish` → the Coolify server, in Vercel |
-| Mail | The Google Workspace SMTP relay, as `no-reply@matricetechnologies.com` |
-| Credentials | Infisical, Matrice Technologies / prod: `POLISH_SUPABASE_*` |
+The hosted instance runs at https://polish.matricetechnologies.com, with its
+own Supabase at https://supabase.polish.matricetechnologies.com, both on a
+[Coolify](https://coolify.io) server. To run your own:
 
-The web image takes `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-and `NEXT_PUBLIC_SITE_URL` as build-time variables; `SUPABASE_SERVICE_ROLE_KEY`
-is runtime only. New migrations go to production with
-`npx supabase db push --db-url …` or the SQL editor in Studio.
+1. Deploy Supabase (Coolify has a one-click template) and apply
+   `supabase/migrations` to it (`npx supabase db push --db-url …`, or paste
+   them into Studio's SQL editor in order).
+2. Configure its auth: site URL and allowed redirects for your web app's
+   domain, and SMTP so magic links are sent.
+3. Deploy `apps/web` with the root `Dockerfile`. `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_SITE_URL` are
+   **build-time** variables; `SUPABASE_SERVICE_ROLE_KEY` is runtime only.
+4. Build the desktop app with `MAIN_VITE_WEB_URL` set to your web app, or
+   point an installed copy at it under Account → Server.
+
+## Contributing and security
+
+Issues and pull requests are welcome. Please report security issues privately;
+see [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE) © Matrice Technologies
 
 ## Not done yet
 

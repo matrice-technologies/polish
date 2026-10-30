@@ -20,12 +20,12 @@ icon: resources/icon.png
 # there is nothing to compile — and cross-arch builds would fail if we tried.
 npmRebuild: false
 
-# Installed copies update themselves from GitHub Releases in this public repo
-# (artifacts only; the source stays private). See src/main/updater.ts.
+# Installed copies update themselves from this repo's GitHub Releases.
+# See src/main/updater.ts.
 publish:
   provider: github
   owner: matrice-technologies
-  repo: polish-releases
+  repo: polish
   # CI creates the release as a draft, every platform uploads into it, and it is
   # published once all of them succeed (.github/workflows/release-desktop.yml).
   releaseType: draft

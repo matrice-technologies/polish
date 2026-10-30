@@ -50,5 +50,6 @@
     "vite": "^8.0.0",
     "zod": "^4.1.13"
   },
-  "homepage": "https://polish.matricetechnologies.com"
+  "homepage": "https://polish.matricetechnologies.com",
+  "license": "MIT"
 }

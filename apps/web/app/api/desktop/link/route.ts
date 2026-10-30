@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 
+import { clientIp, rateLimit } from "@/lib/rate-limit"
 import { siteOrigin } from "@/lib/site-url"
 import { createServiceClient } from "@/lib/supabase/server"
 import { generateDeviceCodes } from "@/lib/tokens"
@@ -21,11 +22,32 @@ const INTERVAL = 2
  * hands out is a code that does nothing until someone signed in approves it.
  */
 export async function POST(request: NextRequest) {
+  // A person signs in a handful of times; anything past this is a script.
+  const limited = rateLimit(`link:${clientIp(request)}`, 10, 10 * 60 * 1000)
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: { "retry-after": String(limited.retryAfter) } },
+    )
+  }
+
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) return NextResponse.json({ error: "invalid_request" }, { status: 400 })
 
   const { deviceCode, deviceCodeHash, userCode } = generateDeviceCodes()
   const supabase = createServiceClient()
+
+  // Links are only useful for ten minutes; clear out ones a day past that so
+  // the table stays small. Not awaited, since it doesn't affect this request —
+  // but `.then` is what sends a Supabase query, so it can't be left off.
+  supabase
+    .from("device_links")
+    .delete()
+    .lt("expires_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .then(
+      () => {},
+      () => {},
+    )
 
   const { error } = await supabase.from("device_links").insert({
     device_code_hash: deviceCodeHash,
