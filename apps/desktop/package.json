@@ -1,7 +1,7 @@
 {
   "name": "@polish/desktop",
   "productName": "Polish",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Select text in any app, press a shortcut, get it back polished.",
   "author": "Matrice Technologies",
