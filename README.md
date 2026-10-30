@@ -45,8 +45,11 @@ cp apps/web/.env.example apps/web/.env.local   # fill in the keys db:start print
 npm run dev:web                          # http://localhost:3000
 ```
 
-The desktop app signs in through `http://localhost:3000` by default
-(`MAIN_VITE_WEB_URL` at build time, or Account → Server in the app).
+`npm run dev:web` binds 3000, or the next free port; pass `-- --port 3001` to
+pick one. Local Supabase accepts sign-in redirects from ports 3000 to 3010, and
+magic-link emails land in Mailpit at http://127.0.0.1:54324. The desktop app
+signs in through `http://localhost:3000` by default (`MAIN_VITE_WEB_URL` at
+build time, or Account → Server in the app).
 
 ## How the pieces fit
 

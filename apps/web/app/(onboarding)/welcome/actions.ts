@@ -65,5 +65,5 @@ export async function createWorkspace(
   }
 
   // The trigger on `workspaces` has already made this user its owner.
-  redirect(`/${createdSlug}`)
+  redirect(`/${createdSlug}/prompts`)
 }

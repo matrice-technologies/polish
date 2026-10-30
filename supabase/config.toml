@@ -34,7 +34,8 @@ enabled = true
 # Where magic links and OAuth come back to. Change for production, and add every
 # origin you sign in from to additional_redirect_urls.
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+# Every port Next may bind locally, so sign-in works whichever one it lands on.
+additional_redirect_urls = ["http://localhost:3000/auth/callback", "http://localhost:3001/auth/callback", "http://localhost:3002/auth/callback", "http://localhost:3003/auth/callback", "http://localhost:3004/auth/callback", "http://localhost:3005/auth/callback", "http://localhost:3006/auth/callback", "http://localhost:3007/auth/callback", "http://localhost:3008/auth/callback", "http://localhost:3009/auth/callback", "http://localhost:3010/auth/callback"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 enable_signup = true
