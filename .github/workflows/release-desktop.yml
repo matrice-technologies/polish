@@ -13,6 +13,16 @@
 #   APPLE_APP_SPECIFIC_PASSWORD  them macOS builds are ad-hoc signed: they run
 #   APPLE_TEAM_ID                after a Gatekeeper warning and cannot update
 #                                themselves.
+#
+# Windows signing, either route (without one, SmartScreen shows "Unknown
+# publisher" on first install; updates work regardless):
+#   Azure Trusted Signing — secrets AZURE_TENANT_ID, AZURE_CLIENT_ID,
+#     AZURE_CLIENT_SECRET, and repository variables AZURE_SIGNING_ENDPOINT
+#     (e.g. https://weu.codesigning.azure.net), AZURE_SIGNING_ACCOUNT,
+#     AZURE_SIGNING_PROFILE, AZURE_SIGNING_PUBLISHER (the certificate's
+#     subject name, e.g. "Matrice Technologies").
+#   A code-signing certificate — secrets WIN_CSC_LINK (.pfx, base64) and
+#     WIN_CSC_KEY_PASSWORD.
 
 name: Release desktop app
 
@@ -83,9 +93,35 @@ jobs:
       - name: Package and upload (Windows)
         if: runner.os == 'Windows'
         working-directory: apps/desktop
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win --publish always
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ vars.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ vars.AZURE_SIGNING_PROFILE }}
+          AZURE_SIGNING_PUBLISHER: ${{ vars.AZURE_SIGNING_PUBLISHER }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "$AZURE_CLIENT_ID" ]; then
+            echo "Signing with Azure Trusted Signing as $AZURE_SIGNING_PUBLISHER."
+            unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD
+            npx electron-builder --win --publish always \
+              -c.win.azureSignOptions.publisherName="$AZURE_SIGNING_PUBLISHER" \
+              -c.win.azureSignOptions.endpoint="$AZURE_SIGNING_ENDPOINT" \
+              -c.win.azureSignOptions.codeSigningAccountName="$AZURE_SIGNING_ACCOUNT" \
+              -c.win.azureSignOptions.certificateProfileName="$AZURE_SIGNING_PROFILE"
+          elif [ -n "$WIN_CSC_LINK" ]; then
+            echo "Signing with the code-signing certificate."
+            npx electron-builder --win --publish always
+          else
+            echo "::warning::No Windows signing configured: SmartScreen will show 'Unknown publisher' on first install."
+            unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD
+            npx electron-builder --win --publish always
+          fi
 
       - name: Package and upload (macOS)
         if: runner.os == 'macOS'
