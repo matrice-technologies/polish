@@ -1,0 +1,90 @@
+/*
+ * The marketing pages' own look: a deep-blue night sky in the spirit of
+ * discord.com, independent of the app's light/dark theme. Everything here is
+ * scoped under .marketing so the signed-in app is untouched.
+ */
+
+.marketing {
+  --night-0: #050a24;
+  --night-1: #0a1440;
+  --night-2: #12207a;
+  --glow: #3b82f6;
+  background:
+    radial-gradient(1200px 700px at 75% -10%, rgb(59 130 246 / 0.35), transparent 60%),
+    radial-gradient(900px 600px at 0% 30%, rgb(79 70 229 / 0.25), transparent 60%),
+    linear-gradient(180deg, var(--night-1) 0%, var(--night-0) 55%, var(--night-1) 100%);
+  color: #fff;
+}
+
+.font-display {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Stars twinkle at their own pace (set inline per star). */
+@keyframes polish-twinkle {
+  0%,
+  100% {
+    opacity: var(--star-min, 0.15);
+  }
+  50% {
+    opacity: var(--star-max, 0.9);
+  }
+}
+.polish-star {
+  animation: polish-twinkle var(--star-duration, 4s) ease-in-out var(--star-delay, 0s) infinite;
+}
+
+/* The floating keycaps and the hero window drift gently. */
+@keyframes polish-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(var(--float-rotate, 0deg));
+  }
+  50% {
+    transform: translate3d(0, var(--float-distance, -14px), 0) rotate(calc(var(--float-rotate, 0deg) + 3deg));
+  }
+}
+.polish-float {
+  animation: polish-float var(--float-duration, 7s) ease-in-out var(--float-delay, 0s) infinite;
+}
+
+/* A keycap press in the demo. */
+@keyframes polish-press {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 4px 0 rgb(15 23 80), 0 8px 18px rgb(0 0 0 / 0.35);
+  }
+  45% {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 rgb(15 23 80), 0 3px 8px rgb(0 0 0 / 0.35);
+  }
+}
+.polish-press {
+  animation: polish-press 520ms ease-in-out;
+}
+
+/* The polished text arrives with a light sweeping across it. */
+@keyframes polish-shine {
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+.polish-shine {
+  background: linear-gradient(100deg, transparent 30%, rgb(147 197 253 / 0.55) 50%, transparent 70%) no-repeat;
+  background-size: 60% 100%;
+  animation: polish-shine 900ms ease-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .polish-star,
+  .polish-float,
+  .polish-press,
+  .polish-shine {
+    animation: none !important;
+  }
+}

@@ -49,7 +49,9 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/invite") ||
-    pathname.startsWith("/download")
+    pathname.startsWith("/download") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/terms")
 
   if (!user && !isPublicRoute) {
     const redirectUrl = request.nextUrl.clone()
