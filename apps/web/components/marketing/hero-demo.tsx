@@ -42,9 +42,16 @@ const SCENARIOS = [
   },
 ]
 
-type Phase = "rough" | "select" | "keys" | "working" | "done"
-const TIMING: Record<Phase, number> = { rough: 1100, select: 900, keys: 750, working: 1300, done: 2800 }
-const NEXT: Record<Phase, Phase> = { rough: "select", select: "keys", keys: "working", working: "done", done: "rough" }
+type Phase = "rough" | "select" | "keys" | "working" | "done" | "leaving"
+const TIMING: Record<Phase, number> = { rough: 1300, select: 900, keys: 750, working: 1300, done: 3200, leaving: 500 }
+const NEXT: Record<Phase, Phase> = {
+  rough: "select",
+  select: "keys",
+  keys: "working",
+  working: "done",
+  done: "leaving",
+  leaving: "rough",
+}
 
 const REDUCE = "(prefers-reduced-motion: reduce)"
 function useReducedMotion() {
@@ -68,7 +75,7 @@ export function HeroDemo({ className }: { className?: string }) {
   useEffect(() => {
     if (reduced) return
     const timer = setTimeout(() => {
-      if (phase === "done") setIndex((i) => (i + 1) % SCENARIOS.length)
+      if (phase === "leaving") setIndex((i) => (i + 1) % SCENARIOS.length)
       setPhase(NEXT[phase])
     }, TIMING[phase])
     return () => clearTimeout(timer)
@@ -77,13 +84,21 @@ export function HeroDemo({ className }: { className?: string }) {
   const shown = reduced ? "done" : phase
   const scenario = SCENARIOS[reduced ? 0 : index]
   const selected = shown === "select" || shown === "keys" || shown === "working"
+  const polished = shown === "done" || shown === "leaving"
   const mod = platform === "mac" ? "⌘" : "Ctrl"
   const shift = platform === "mac" ? "⇧" : "Shift"
 
   return (
     <div className={cn("relative", className)}>
       {/* The app window the text lives in. */}
-      <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#0d1640]/90 shadow-[0_30px_80px_-20px_rgb(0_0_0/0.7),0_0_0_1px_rgb(59_130_246/0.15)] backdrop-blur">
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-2xl border bg-[#0d1640]/90 backdrop-blur transition-[border-color,box-shadow] duration-700 ease-out",
+          shown === "done"
+            ? "border-blue-300/30 shadow-[0_30px_80px_-20px_rgb(0_0_0/0.7),0_0_60px_-10px_rgb(59_130_246/0.45)]"
+            : "border-white/15 shadow-[0_30px_80px_-20px_rgb(0_0_0/0.7),0_0_0_1px_rgb(59_130_246/0.15)]",
+        )}
+      >
         <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
           <span className="size-3 rounded-full bg-white/15" />
           <span className="size-3 rounded-full bg-white/15" />
@@ -93,12 +108,16 @@ export function HeroDemo({ className }: { className?: string }) {
         </div>
 
         <div className="relative min-h-52 px-6 pt-6 pb-20 sm:min-h-48">
-          {shown === "done" ? (
-            <p key={`after-${index}`} className="polish-shine text-lg/relaxed text-white sm:text-xl/relaxed">
-              {scenario.after}
-            </p>
-          ) : (
-            <p className="text-lg/relaxed text-blue-100/80 sm:text-xl/relaxed">
+          {/* Both versions share one grid cell, so swapping them never moves anything. */}
+          <div className="grid text-lg/relaxed sm:text-xl/relaxed">
+            <p
+              key={`before-${index}`}
+              aria-hidden={polished}
+              className={cn(
+                "polish-fade-in text-blue-100/80 transition-[opacity,filter,transform] duration-300 ease-out [grid-area:1/1]",
+                polished && "-translate-y-1 opacity-0 blur-[3px]",
+              )}
+            >
               <span
                 className={cn(
                   "box-decoration-clone rounded bg-gradient-to-r from-blue-500/45 to-blue-500/45 bg-no-repeat transition-[background-size] ease-out",
@@ -109,7 +128,25 @@ export function HeroDemo({ className }: { className?: string }) {
               </span>
               {shown === "rough" ? <span className="ml-0.5 inline-block h-5 w-0.5 animate-pulse bg-blue-200 align-middle" /> : null}
             </p>
-          )}
+            {polished ? (
+              // The rewrite arrives word by word: each one fades in and sharpens.
+              <p
+                key={`after-${index}`}
+                className={cn(
+                  "text-white transition-[opacity,filter] duration-500 ease-out [grid-area:1/1]",
+                  shown === "leaving" && "opacity-0 blur-[3px]",
+                )}
+              >
+                {scenario.after.split(" ").map((word, i) => (
+                  <span key={i}>
+                    <span className="polish-word" style={{ "--word-delay": `${120 + i * 45}ms` } as React.CSSProperties}>
+                      {word}
+                    </span>{" "}
+                  </span>
+                ))}
+              </p>
+            ) : null}
+          </div>
 
           {/* The HUD pill Polish shows while it works. */}
           <div
