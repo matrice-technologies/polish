@@ -57,8 +57,9 @@ npm run dev:web                          # http://localhost:3000
 `npm run dev:web` binds 3000, or the next free port; pass `-- --port 3001` to
 pick one. Local Supabase accepts sign-in redirects from ports 3000 to 3010, and
 magic-link emails land in Mailpit at http://127.0.0.1:54324. The desktop app
-signs in through `http://localhost:3000` by default (`MAIN_VITE_WEB_URL` at
-build time, or Account → Server in the app).
+signs in through production by default; for local development put
+`MAIN_VITE_WEB_URL=http://localhost:3000` in `apps/desktop/.env.development`
+(dev mode only), or change it in the app under Account → Server.
 
 ## How the pieces fit
 
@@ -161,10 +162,25 @@ npm run dist --workspace @polish/desktop
 electron-builder writes an NSIS installer, a DMG or an AppImage to
 `apps/desktop/release/`. Builds are unsigned.
 
+## Production
+
+| | |
+| --- | --- |
+| Web app | https://polish.matricetechnologies.com (Coolify project `polish`, app `polish-web`, built from `Dockerfile`) |
+| Supabase | https://supabase.polish.matricetechnologies.com: API, and the Studio dashboard behind basic auth (Coolify service `polish-supabase`) |
+| DNS | A records `polish` and `supabase.polish` → the Coolify server, in Vercel |
+| Mail | The Google Workspace SMTP relay, as `no-reply@matricetechnologies.com` |
+| Credentials | Infisical, Matrice Technologies / prod: `POLISH_SUPABASE_*` |
+
+The web image takes `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+and `NEXT_PUBLIC_SITE_URL` as build-time variables; `SUPABASE_SERVICE_ROLE_KEY`
+is runtime only. New migrations go to production with
+`npx supabase db push --db-url …` or the SQL editor in Studio.
+
 ## Not done yet
 
 - Wayland: global shortcuts and synthetic keystrokes need X11 (or XWayland).
 - Code signing and auto-update for the desktop app.
-- Deploying `apps/web`: the boilerplate's Coolify routine still applies, but
-  Nixpacks needs pointing at the workspace (`npm run build --workspace
-  @polish/web` from the root).
+- Google sign-in in production: add
+  `https://supabase.polish.matricetechnologies.com/auth/v1/callback` to an
+  OAuth client in Google Cloud, then enable the provider in `polish-supabase`.

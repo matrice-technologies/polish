@@ -32,7 +32,8 @@ export interface LocalState {
 /** "user" changes are new edits to upload; "sync" changes came from the account. */
 export type ChangeSource = "user" | "sync"
 
-const DEFAULT_WEB_URL = import.meta.env.MAIN_VITE_WEB_URL || "http://localhost:3000"
+// Production unless a build says otherwise (apps/desktop/.env for local development).
+const DEFAULT_WEB_URL = import.meta.env.MAIN_VITE_WEB_URL || "https://polish.matricetechnologies.com"
 
 const DEFAULT_AI: AiSettings = {
   provider: "anthropic",
