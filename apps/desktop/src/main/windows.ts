@@ -62,8 +62,8 @@ export function showMainWindow() {
     // which keeps Windows 11's snap layouts working.
     titleBarStyle: "hidden",
     ...(isMac ? { trafficLightPosition: { x: 18, y: 17 } } : { titleBarOverlay: titleBarOverlay() }),
-    // The page's own background (shadcn --background), so there is no flash before it paints.
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0a0a0a" : "#ffffff",
+    // The backdrop's colour (the desktop's --sidebar), so there is no flash before it paints.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#050505" : "#f5f5f5",
     webPreferences: { preload: preload(), sandbox: true },
   })
   const window = mainWindow

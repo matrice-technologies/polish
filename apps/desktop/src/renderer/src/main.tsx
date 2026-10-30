@@ -54,7 +54,7 @@ function App() {
       <SidebarProvider className="h-svh min-h-0">
         <AppSidebar state={state} page={page} onNavigate={setPage} />
         <TitleBarSlot.Provider value={titleBar}>
-          <SidebarInset className="min-h-0 overflow-hidden ring-1 ring-border md:peer-data-[variant=inset]:mt-12">
+          <SidebarInset className="min-h-0 overflow-hidden shadow-sm ring-1 ring-border md:peer-data-[variant=inset]:mt-12 dark:ring-white/15">
             {page === "prompts" ? <PromptsPage state={state} /> : null}
             {page === "settings" ? <SettingsPage state={state} /> : null}
             {page === "account" ? <AccountPage state={state} /> : null}

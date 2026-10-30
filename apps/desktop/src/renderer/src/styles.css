@@ -15,6 +15,24 @@
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;
 }
 
+/*
+ * The window is the inset layout: the sidebar and title strip are the window's
+ * backdrop and the page is a raised panel on it. The shared tokens put the
+ * sidebar on --background (right for the web app, where a border separates
+ * them), which here would make panel and backdrop one colour — so the backdrop
+ * steps a little away from the page instead: greyer in light, darker in dark.
+ * Unlayered and after the shared file, so it wins over it.
+ */
+/* Light only: a plain :root rule here would also beat the shared .dark values. */
+:root:not(.dark) {
+  --sidebar: oklch(0.97 0 0);
+  /* The hovered / current item has to stay a step darker than the grey backdrop. */
+  --sidebar-accent: oklch(0.93 0 0);
+}
+.dark {
+  --sidebar: oklch(0.115 0 0);
+}
+
 @layer base {
   html,
   body,
