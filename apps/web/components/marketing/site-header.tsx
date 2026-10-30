@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { Logo } from "@/components/logo"
+import { AccountLink } from "@/components/marketing/account-link"
 import { GITHUB_URL } from "@/lib/app"
 
 const NAV = [
@@ -27,12 +28,7 @@ export function SiteHeader() {
         ))}
       </nav>
 
-      <Link
-        href="/login"
-        className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0a1440] transition-colors hover:bg-blue-50 hover:text-blue-700"
-      >
-        Log in
-      </Link>
+      <AccountLink className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0a1440] transition-colors hover:bg-blue-50 hover:text-blue-700" />
     </header>
   )
 }

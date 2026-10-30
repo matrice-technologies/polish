@@ -27,6 +27,8 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { DesktopDownloadCard } from "@/components/desktop-download-card"
+import type { DownloadLinks } from "@/components/download-buttons"
 import { Logo } from "@/components/logo"
 import { signOut } from "@/app/(auth)/login/actions"
 import { APP_NAME } from "@/lib/app"
@@ -39,8 +41,10 @@ function initials(name: string, email: string) {
 }
 
 export function AppSidebar({
+  release,
   user,
 }: {
+  release: DownloadLinks | null
   user: { email: string; fullName: string | null; avatarUrl: string | null }
 }) {
   const pathname = usePathname()
@@ -90,6 +94,7 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter>
+        <DesktopDownloadCard links={release} />
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>

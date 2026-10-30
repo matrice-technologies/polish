@@ -14,7 +14,7 @@ export interface DownloadLinks {
   macX64: string | null
 }
 
-type Os = "windows" | "mac" | "other"
+export type Os = "windows" | "mac" | "other"
 
 function detect(): Os {
   const ua = navigator.userAgent
@@ -24,7 +24,7 @@ function detect(): Os {
 }
 
 /** The visitor's OS; the server renders the neutral version and hydration picks. */
-function useOs(): Os {
+export function useOs(): Os {
   return useSyncExternalStore(
     () => () => {},
     detect,

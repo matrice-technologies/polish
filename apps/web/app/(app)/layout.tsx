@@ -1,14 +1,16 @@
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { requireUser } from "@/lib/auth"
+import { latestRelease } from "@/lib/releases"
 
 /** The signed-in shell: the sidebar on the left, the page beside it. */
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireUser()
+  const [user, release] = await Promise.all([requireUser(), latestRelease()])
 
   return (
     <SidebarProvider>
       <AppSidebar
+        release={release}
         user={{
           email: user.email ?? "",
           fullName: (user.user_metadata?.full_name as string | undefined) ?? null,
