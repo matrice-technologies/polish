@@ -4,28 +4,22 @@ import { IMAGE_EXTENSIONS, MAX_IMAGE_BYTES } from "@/lib/schema"
 import { createClient } from "@/lib/supabase/server"
 
 /**
- * Image uploads, shared by every avatar and logo in the app.
- *
- * The three call sites differ only in which bucket and which folder, so the
- * validation, the rollback and the delete live here once. Both buckets are
- * public: these are faces and marks shown to everyone who can see the thing
- * they belong to, and a signed URL per render would be a round trip for
- * something that is not a secret.
+ * Avatar uploads. The bucket is public: a signed URL per render would be a
+ * round trip for something that is not a secret.
  *
  * Write access is enforced by storage policies keyed on the first path
- * segment — the owner's user id, or the workspace id — so the folder name is
- * load-bearing, not decoration.
+ * segment — the owner's user id — so the folder name is load-bearing, not
+ * decoration.
  */
 
 export const AVATAR_BUCKET = "avatars"
-export const LOGO_BUCKET = "workspace-logos"
 
 export type UploadResult = { url: string; key: string } | { error: string }
 
 export async function uploadImage(
   file: FormDataEntryValue | null,
   folder: string,
-  bucket: string = LOGO_BUCKET,
+  bucket: string = AVATAR_BUCKET,
 ): Promise<UploadResult> {
   if (!(file instanceof File) || file.size === 0) {
     return { error: "Choose an image to upload." }
@@ -69,7 +63,7 @@ export async function removeImage(url: string | null): Promise<void> {
   if (!match) return
 
   const [, bucket, key] = match
-  if (bucket !== AVATAR_BUCKET && bucket !== LOGO_BUCKET) return
+  if (bucket !== AVATAR_BUCKET) return
 
   const supabase = await createClient()
   await supabase.storage.from(bucket).remove([decodeURIComponent(key.split("?")[0])])

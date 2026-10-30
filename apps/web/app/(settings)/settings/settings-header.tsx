@@ -1,5 +1,3 @@
-import { Info } from "lucide-react"
-
 /**
  * The bar at the top of a settings section. h-14 with a bottom border, the same
  * box as the sidebar's own header, so the two rules meet as one line.
@@ -65,15 +63,5 @@ export function SettingsGroup({
       ) : null}
       {children}
     </section>
-  )
-}
-
-/** A standing remark about the whole section, not about one field. */
-export function SettingsNote({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="bg-muted/40 text-muted-foreground mb-8 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-xs/relaxed">
-      <Info className="mt-0.5 size-3.5 shrink-0" />
-      <span>{children}</span>
-    </div>
   )
 }

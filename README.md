@@ -27,9 +27,9 @@ provider and its keys stay per-device.
 | | |
 | --- | --- |
 | `apps/desktop` | Electron app: tray, global shortcuts, copy → Claude → paste, picker, HUD |
-| `apps/web` | Next.js app from [`nextjs-boilerplate`](https://github.com/matrice-technologies/nextjs-boilerplate): auth, prompts editor, desktop sign-in |
+| `apps/web` | Next.js app: sign-in, the prompts editor, settings, desktop sign-in, and the website |
 | `packages/shared` | What both apps must agree on: prompt and settings schemas, shortcut parsing, the sync merge, the system prompt |
-| `supabase` | Migrations: the boilerplate's three, plus `…04_polish.sql` |
+| `supabase` | Migrations: privileges, avatar storage, and Polish's tables |
 
 npm workspaces; run everything from the root.
 
@@ -143,15 +143,19 @@ use the same paths.
 
 ## Database
 
-`supabase/migrations/00000000000004_polish.sql` adds:
+An account is one person; there are no teams or workspaces. Every row belongs to
+its user, and RLS lets you read and write only your own.
+`supabase/migrations/00000000000004_polish.sql` holds Polish's tables:
 
 - `prompts`: keyed `(user_id, id)`, tombstoned, no delete grant
 - `user_settings`: one JSON row per person, parsed field by field by
   `@polish/shared`
 - `device_links`: service-role only (RLS on, no policies, no grants)
 
-`apps/web/lib/database.types.ts` was extended by hand for these tables;
-regenerate it with `npm run db:types` once a local database is up.
+The other migrations set baseline privileges, add the `avatars` bucket, and
+(`…05_accounts_only.sql`) remove the workspace tables that databases created
+before Polish dropped them still have. Regenerate
+`apps/web/lib/database.types.ts` with `npm run db:types` after a schema change.
 
 ## Releasing the desktop app
 
@@ -195,7 +199,11 @@ own Supabase at https://supabase.polish.matricetechnologies.com, both on a
    `supabase/migrations` to it (`npx supabase db push --db-url …`, or paste
    them into Studio's SQL editor in order).
 2. Configure its auth: site URL and allowed redirects for your web app's
-   domain, and SMTP so magic links are sent.
+   domain, and SMTP so magic links are sent. For Google sign-in, create an
+   OAuth client of type Web application whose redirect URI is
+   `https://<your-supabase>/auth/v1/callback`, and pass its ID and secret to
+   the auth container as `GOTRUE_EXTERNAL_GOOGLE_ENABLED`, `…_CLIENT_ID`,
+   `…_SECRET` and `…_REDIRECT_URI`.
 3. Deploy `apps/web` with the root `Dockerfile`. `NEXT_PUBLIC_SUPABASE_URL`,
    `NEXT_PUBLIC_SUPABASE_ANON_KEY` and `NEXT_PUBLIC_SITE_URL` are
    **build-time** variables; `SUPABASE_SERVICE_ROLE_KEY` is runtime only.
@@ -214,7 +222,5 @@ see [SECURITY.md](SECURITY.md).
 ## Not done yet
 
 - Wayland: global shortcuts and synthetic keystrokes need X11 (or XWayland).
-- Code signing and auto-update for the desktop app.
-- Google sign-in in production: add
-  `https://supabase.polish.matricetechnologies.com/auth/v1/callback` to an
-  OAuth client in Google Cloud, then enable the provider in `polish-supabase`.
+- Code signing: Windows SmartScreen and macOS Gatekeeper warn until the
+  release workflow is given a certificate (see Releasing).

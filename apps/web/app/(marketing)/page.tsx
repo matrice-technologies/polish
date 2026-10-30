@@ -6,15 +6,14 @@ import { Faq } from "@/components/marketing/faq"
 import { HeroDemo } from "@/components/marketing/hero-demo"
 import { Keycap } from "@/components/marketing/keycap"
 import { GITHUB_URL } from "@/lib/app"
-import { listMemberships } from "@/lib/auth"
 import { latestRelease } from "@/lib/releases"
 import { createClient } from "@/lib/supabase/server"
 import { cn } from "@/lib/utils"
 
 /**
- * Two pages behind one route. A signed-in visitor is routed onward — new users
- * to onboarding, everyone else to their prompts — and a signed-out one gets
- * the landing page. `proxy.ts` lets `/` through unauthenticated for that reason.
+ * Two pages behind one route. A signed-in visitor goes on to their prompts, and
+ * a signed-out one gets the landing page. `proxy.ts` lets `/` through
+ * unauthenticated for that reason.
  */
 export default async function Page() {
   const supabase = await createClient()
@@ -22,11 +21,7 @@ export default async function Page() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (user) {
-    const memberships = await listMemberships()
-    if (memberships.length === 0) redirect("/welcome")
-    redirect(`/${memberships[0].workspaceSlug}/prompts`)
-  }
+  if (user) redirect("/prompts")
 
   const release = await latestRelease()
 

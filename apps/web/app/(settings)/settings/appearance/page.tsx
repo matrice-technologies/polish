@@ -1,8 +1,6 @@
 import type { Metadata } from "next"
 import { Palette } from "lucide-react"
 
-import { requireMembership } from "@/lib/auth"
-
 import {
   SettingsBody,
   SettingsGroup,
@@ -14,14 +12,7 @@ import { APP_NAME } from "@/lib/app"
 
 export const metadata: Metadata = { title: "Appearance" }
 
-export default async function AppearancePage({
-  params,
-}: {
-  params: Promise<{ workspace: string }>
-}) {
-  const { workspace: slug } = await params
-  await requireMembership(slug)
-
+export default function AppearancePage() {
   return (
     <>
       <SettingsHeader icon={<Palette className="size-4" />} title="Appearance" />

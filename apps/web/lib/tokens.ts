@@ -1,22 +1,15 @@
 import { createHash, randomBytes, randomInt } from "node:crypto"
 
 /**
- * Secret material for invitations and desktop device links.
+ * Secret material for desktop device links.
  *
- * Only the hash is ever persisted. The raw value travels once, inside the
- * emailed link, and cannot be recovered afterwards — so a database leak yields
- * nothing usable.
+ * Only the hash is ever persisted. The raw device code lives in the desktop app
+ * and cannot be recovered afterwards — so a database leak yields nothing usable.
  */
 
 /** URL-safe random string. 32 bytes of entropy, base64url, no padding. */
 function randomToken(bytes = 32): string {
   return randomBytes(bytes).toString("base64url")
-}
-
-/** Invitation token; travels only inside the emailed link. */
-export function generateInviteToken(): { raw: string; hash: string } {
-  const raw = randomToken(32)
-  return { raw, hash: hashSecret(raw) }
 }
 
 /**

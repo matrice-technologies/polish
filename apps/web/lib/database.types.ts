@@ -1,7 +1,6 @@
 /**
  * Database types, generated from Supabase and then trimmed to what this app
- * uses: workspaces, their members and invitations, profiles, projects, and
- * Polish's own prompts, user_settings and device_links.
+ * uses: Polish's prompts, user_settings and device_links.
  *
  * Regenerate against your own project rather than editing by hand.
  */
@@ -52,73 +51,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          email: string | null
-          full_name: string | null
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id: string
-          updated_at?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      projects: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          logo_url: string | null
-          name: string
-          slug: string
-          updated_at: string
-          workspace_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          logo_url?: string | null
-          name: string
-          slug: string
-          updated_at?: string
-          workspace_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          logo_url?: string | null
-          name?: string
-          slug?: string
-          updated_at?: string
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "projects_workspace_id_fkey"
-            columns: ["workspace_id"]
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       prompts: {
         Row: {
@@ -174,150 +106,15 @@ export type Database = {
         }
         Relationships: []
       }
-      workspace_invitations: {
-        Row: {
-          accepted_at: string | null
-          accepted_by: string | null
-          created_at: string
-          email: string
-          expires_at: string
-          id: string
-          invited_by: string | null
-          role: Database["public"]["Enums"]["workspace_role"]
-          token_hash: string
-          workspace_id: string
-        }
-        Insert: {
-          accepted_at?: string | null
-          accepted_by?: string | null
-          created_at?: string
-          email: string
-          expires_at?: string
-          id?: string
-          invited_by?: string | null
-          role?: Database["public"]["Enums"]["workspace_role"]
-          token_hash: string
-          workspace_id: string
-        }
-        Update: {
-          accepted_at?: string | null
-          accepted_by?: string | null
-          created_at?: string
-          email?: string
-          expires_at?: string
-          id?: string
-          invited_by?: string | null
-          role?: Database["public"]["Enums"]["workspace_role"]
-          token_hash?: string
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workspace_invitations_workspace_id_fkey"
-            columns: ["workspace_id"]
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workspace_members: {
-        Row: {
-          created_at: string
-          role: Database["public"]["Enums"]["workspace_role"]
-          user_id: string
-          workspace_id: string
-        }
-        Insert: {
-          created_at?: string
-          role?: Database["public"]["Enums"]["workspace_role"]
-          user_id: string
-          workspace_id: string
-        }
-        Update: {
-          created_at?: string
-          role?: Database["public"]["Enums"]["workspace_role"]
-          user_id?: string
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workspace_members_user_id_profiles_fkey"
-            columns: ["user_id"]
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workspace_members_workspace_id_fkey"
-            columns: ["workspace_id"]
-            referencedRelation: "workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workspaces: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          logo_url: string | null
-          name: string
-          slug: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          logo_url?: string | null
-          name: string
-          slug: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          logo_url?: string | null
-          name?: string
-          slug?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      create_workspace: {
-        Args: { workspace_name: string; workspace_slug: string }
-        Returns: {
-          created_at: string
-          created_by: string | null
-          id: string
-          logo_url: string | null
-          name: string
-          slug: string
-          updated_at: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "workspaces"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      is_workspace_admin: { Args: { workspace: string }; Returns: boolean }
-      is_workspace_member: { Args: { workspace: string }; Returns: boolean }
-      is_workspace_owner: { Args: { workspace: string }; Returns: boolean }
-      project_workspace: { Args: { project: string }; Returns: string }
-      workspace_logo_workspace: {
-        Args: { object_name: string }
-        Returns: string
-      }
+      [_ in never]: never
     }
     Enums: {
-      workspace_role: "owner" | "admin" | "member"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -444,27 +241,6 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {
-      actor_kind: ["user", "token", "widget", "system"],
-      feedback_access: ["public", "invited"],
-      feedback_event_type: [
-        "created",
-        "status_changed",
-        "commented",
-        "assigned",
-      ],
-      feedback_kind: [
-        "bug",
-        "suggestion",
-        "ui",
-        "ux",
-        "other",
-        "performance",
-        "praise",
-      ],
-      feedback_status: ["unprocessed", "received", "being_fixed", "released"],
-      feedback_visibility: ["private", "public"],
-      workspace_role: ["owner", "admin", "member"],
-    },
+    Enums: {},
   },
 } as const

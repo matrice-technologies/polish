@@ -42,7 +42,6 @@ export async function signInWithMagicLink(
     options: {
       emailRedirectTo: callback.toString(),
       // Magic link doubles as sign-up: there is no separate registration step.
-      // The workspace is created afterwards, during onboarding.
       shouldCreateUser: true,
     },
   })

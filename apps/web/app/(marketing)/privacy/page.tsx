@@ -70,7 +70,6 @@ export default function PrivacyPage() {
             For each desktop sign-in, the device name the app reports (&ldquo;Polish on&rdquo; your computer&rsquo;s
             name) and when it was approved. Unapproved sign-in codes are deleted within a day.
           </li>
-          <li>Workspaces and members, if you use them.</li>
         </ul>
         <p>
           We never store your API keys or the text you rewrite. Sign-in links are emailed through Google Workspace. Our

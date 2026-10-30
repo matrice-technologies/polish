@@ -42,7 +42,7 @@ export async function savePrompt(input: PromptWrite): Promise<ActionResult> {
 
   if (error) return { ok: false, message: error.message }
 
-  revalidatePath("/[workspace]/prompts", "page")
+  revalidatePath("/prompts")
   return { ok: true }
 }
 
@@ -62,7 +62,7 @@ export async function deletePrompt(prompt: PromptWrite): Promise<ActionResult> {
 
   if (error) return { ok: false, message: error.message }
 
-  revalidatePath("/[workspace]/prompts", "page")
+  revalidatePath("/prompts")
   return { ok: true }
 }
 
@@ -80,6 +80,6 @@ export async function saveSettings(settings: SyncedSettings): Promise<ActionResu
 
   if (error) return { ok: false, message: error.message }
 
-  revalidatePath("/[workspace]/prompts", "page")
+  revalidatePath("/prompts")
   return { ok: true }
 }

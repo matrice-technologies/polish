@@ -34,9 +34,9 @@ export async function createClient() {
 
 /**
  * Service-role client. Bypasses RLS entirely, so it is confined to paths that
- * do their own authorization first: widget ingest (validates a project key),
- * the agent API (validates a bearer token) and invitation acceptance
- * (validates an invite token). Never import this into a Client Component.
+ * do their own authorization first: the desktop sign-in routes, which check a
+ * device code or the approving user's session. Never import this into a Client
+ * Component.
  */
 export function createServiceClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY

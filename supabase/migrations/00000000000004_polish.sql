@@ -1,9 +1,9 @@
 -- Polish: prompts, synced settings, and linking the desktop app to an account.
 --
--- Prompts and settings belong to a person, not a workspace: they are the
--- shortcuts on one person's keyboard. The desktop app writes them directly
--- through PostgREST with the user's own session, so RLS is the whole access
--- story — each policy is "it is yours".
+-- Prompts and settings belong to a person: they are the shortcuts on one
+-- person's keyboard. The desktop app writes them directly through PostgREST
+-- with the user's own session, so RLS is the whole access story — each policy
+-- is "it is yours".
 --
 -- Both apps sync last-write-wins on `updated_at`, which the *client* sets: the
 -- desktop app may have made the edit hours ago while offline, and stamping it
@@ -48,7 +48,7 @@ create policy "prompts: owner updates" on public.prompts
 
 -- No delete policy or grant: the apps delete by tombstone. The revoke undoes
 -- the blanket grant some Supabase instances give every new public table (see
--- the Grants section of the RLS migration).
+-- the first migration).
 revoke all on public.prompts from anon, authenticated;
 grant select, insert, update on public.prompts to authenticated;
 grant all on public.prompts to service_role;

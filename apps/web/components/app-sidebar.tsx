@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, LayoutGrid, LogOut, Moon, Settings, Sparkles, Sun } from "lucide-react"
+import { LogOut, Moon, Settings, Sparkles, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -23,15 +23,13 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { WorkspaceSwitcher, type WorkspaceOption } from "@/components/workspace-switcher"
-import { useCurrentProjectSlug } from "@/hooks/use-current-project"
+import { Logo } from "@/components/logo"
 import { signOut } from "@/app/(auth)/login/actions"
-import type { ProjectListItem } from "@/lib/queries"
+import { APP_NAME } from "@/lib/app"
 import { cn } from "@/lib/utils"
 
 function initials(name: string, email: string) {
@@ -41,100 +39,52 @@ function initials(name: string, email: string) {
 }
 
 export function AppSidebar({
-  workspaces,
-  workspaceSlug,
-  projects,
   user,
 }: {
-  workspaces: WorkspaceOption[]
-  workspaceSlug: string
-  projects: ProjectListItem[]
   user: { email: string; fullName: string | null; avatarUrl: string | null }
 }) {
   const pathname = usePathname()
   const { resolvedTheme, setTheme } = useTheme()
-  const currentProjectSlug = useCurrentProjectSlug(workspaceSlug, projects)
-  const projectBase = currentProjectSlug ? `/${workspaceSlug}/${currentProjectSlug}` : null
 
   return (
     <Sidebar collapsible="icon">
       {/* h-14 + border-b is exactly the content header's box, and both are
-          border-box, so the two rules meet as one line across the viewport.
-          justify-center then leaves the switcher the same 9.5px above and
-          below that the project switcher gets in that header. */}
+          border-box, so the two rules meet as one line across the viewport. */}
       <SidebarHeader className="h-14 shrink-0 justify-center border-b">
-        <WorkspaceSwitcher workspaces={workspaces} currentSlug={workspaceSlug} />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip={APP_NAME} render={<Link href="/prompts" />}>
+              <Logo className="size-4" />
+              <span className="font-heading font-semibold">{APP_NAME}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent>
-        {projectBase ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>Project</SidebarGroupLabel>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={pathname === projectBase}
-                  tooltip="Overview"
-                  render={<Link href={projectBase} />}
-                >
-                  <LayoutDashboard />
-                  <span>Overview</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={pathname === `${projectBase}/settings`}
-                  tooltip="Project settings"
-                  render={<Link href={`${projectBase}/settings`} />}
-                >
-                  <Settings />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroup>
-        ) : null}
-
         <SidebarGroup>
-          <SidebarGroupLabel>Polish</SidebarGroupLabel>
+          <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                isActive={pathname === `/${workspaceSlug}/prompts`}
+                isActive={pathname === "/prompts"}
                 tooltip="Prompts"
-                render={<Link href={`/${workspaceSlug}/prompts`} />}
+                render={<Link href="/prompts" />}
               >
                 <Sparkles />
                 <span>Prompts</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
-          <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                isActive={pathname === `/${workspaceSlug}`}
-                tooltip="Projects"
-                render={<Link href={`/${workspaceSlug}`} />}
+                isActive={pathname.startsWith("/settings")}
+                tooltip="Settings"
+                render={<Link href="/settings" />}
               >
-                <LayoutGrid />
-                <span>Projects</span>
+                <Settings />
+                <span>Settings</span>
               </SidebarMenuButton>
-              {projects.length ? (
-                /* A tinted pill rather than a solid fill. The peer- rules
-                   repeat the colour because SidebarMenuBadge otherwise hands
-                   the text to the row's accent foreground on hover, which
-                   would flicker the count from blue to plain. */
-                <SidebarMenuBadge className="rounded-full bg-blue-500/10 text-blue-600 peer-hover/menu-button:text-blue-600 peer-data-active/menu-button:text-blue-600 dark:bg-blue-400/15 dark:text-blue-400 dark:peer-hover/menu-button:text-blue-400 dark:peer-data-active/menu-button:text-blue-400">
-                  {projects.length}
-                </SidebarMenuBadge>
-              ) : null}
             </SidebarMenuItem>
-            {/* Members, API tokens and workspace settings are all sections of
-                /settings now, reached from the workspace switcher above. */}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

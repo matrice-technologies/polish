@@ -2,49 +2,27 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ArrowLeft, Building2, Palette, UserCircle, Users } from "lucide-react"
+import { ArrowLeft, Palette, UserCircle } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 /**
- * Settings navigation, in one list rather than tabs: personal and workspace
- * settings are the same errand from the reader's side, and splitting them
- * across two surfaces meant knowing which one a thing lived on before you
- * could go and find it.
- *
- * The classes below are lifted from `ui/sidebar.tsx` rather than approximated,
- * so this reads as the same furniture as the app's own sidebar — 16rem wide,
- * `px-2 py-1` groups, `h-7 px-2 py-1` rows on the sidebar-accent tokens. It cannot
- * use those components directly: they read `useSidebar`, and this tree has no
- * SidebarProvider above it — there is nothing here to collapse.
- *
- * Takes `admin` already resolved rather than the role — `isAtLeastAdmin` sits
- * in lib/auth beside the server-only Supabase client, which cannot cross into
- * this bundle.
+ * Settings navigation. The classes below are lifted from `ui/sidebar.tsx`
+ * rather than approximated, so this reads as the same furniture as the app's
+ * own sidebar — 16rem wide, `px-2 py-1` groups, `h-7 px-2 py-1` rows on the
+ * sidebar-accent tokens. It cannot use those components directly: they read
+ * `useSidebar`, and this tree has no SidebarProvider above it — there is
+ * nothing here to collapse.
  */
-export function SettingsSidebar({
-  workspaceSlug,
-  admin,
-}: {
-  workspaceSlug: string
-  admin: boolean
-}) {
+export function SettingsSidebar() {
   const pathname = usePathname()
-  const base = `/${workspaceSlug}/settings`
 
   const sections = [
     {
-      title: "Personal",
+      title: "Account",
       items: [
-        { href: `${base}/account`, label: "Profile", icon: UserCircle, show: true },
-        { href: `${base}/appearance`, label: "Appearance", icon: Palette, show: true },
-      ],
-    },
-    {
-      title: "Workspace",
-      items: [
-        { href: base, label: "General", icon: Building2, show: admin },
-        { href: `${base}/members`, label: "Members", icon: Users, show: true },
+        { href: "/settings", label: "Profile", icon: UserCircle },
+        { href: "/settings/appearance", label: "Appearance", icon: Palette },
       ],
     },
   ]
@@ -55,8 +33,8 @@ export function SettingsSidebar({
           content header beside it, so all three rules meet as one line. */}
       <div className="flex h-14 shrink-0 items-center gap-1 border-b p-2">
         <Link
-          href={`/${workspaceSlug}`}
-          aria-label="Back to workspace"
+          href="/prompts"
+          aria-label="Back to prompts"
           className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex size-8 shrink-0 items-center justify-center rounded-[calc(var(--radius-sm)+2px)] transition-colors"
         >
           <ArrowLeft className="size-4" />
@@ -65,14 +43,11 @@ export function SettingsSidebar({
       </div>
 
       <nav className="no-scrollbar flex min-h-0 flex-1 flex-col overflow-auto py-1">
-        {sections.map((section) => {
-          const items = section.items.filter((item) => item.show)
-          if (!items.length) return null
-
+        {sections.map(({ title, items }) => {
           return (
-            <div key={section.title} className="relative flex w-full min-w-0 flex-col px-2 py-1">
+            <div key={title} className="relative flex w-full min-w-0 flex-col px-2 py-1">
               <div className="text-sidebar-foreground/70 flex h-8 shrink-0 items-center rounded-md px-2 text-xs">
-                {section.title}
+                {title}
               </div>
 
               <div className="flex w-full min-w-0 flex-col gap-px">

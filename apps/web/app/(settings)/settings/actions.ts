@@ -42,7 +42,7 @@ export async function updateAccountName(
 
   if (error) return { status: "error", message: error.message }
 
-  // The name is rendered by the sidebar, which lives in the workspace layout.
+  // The name is rendered by the sidebar, which lives in the app layout.
   revalidatePath("/", "layout")
   return { status: "saved" }
 }

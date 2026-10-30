@@ -3,16 +3,10 @@ import { LogOut, UserCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { requireMembership, requireUser } from "@/lib/auth"
+import { requireUser } from "@/lib/auth"
 import { signOut } from "@/app/(auth)/login/actions"
 
-import {
-  SettingsBody,
-  SettingsGroup,
-  SettingsHeader,
-  SettingsNote,
-  SettingsTitle,
-} from "../settings-header"
+import { SettingsBody, SettingsGroup, SettingsHeader, SettingsTitle } from "./settings-header"
 import { AvatarForm } from "./avatar-form"
 import { NameForm } from "./name-form"
 
@@ -24,19 +18,9 @@ function initials(name: string, email: string) {
   return (parts[0]?.[0] ?? "?").concat(parts[1]?.[0] ?? "").toUpperCase()
 }
 
-/**
- * The signed-in person's own settings, as opposed to the workspace's. Nothing
- * here reads the slug beyond confirming the visitor belongs to it.
- */
-export default async function AccountPage({
-  params,
-}: {
-  params: Promise<{ workspace: string }>
-}) {
-  const { workspace: slug } = await params
-
+/** The account: name, picture, email, and signing out. */
+export default async function AccountPage() {
   const user = await requireUser()
-  await requireMembership(slug)
 
   const fullName = (user.user_metadata?.full_name as string | undefined) ?? ""
   const avatarUrl = (user.user_metadata?.avatar_url as string | undefined) ?? null
@@ -46,8 +30,6 @@ export default async function AccountPage({
       <SettingsHeader icon={<UserCircle className="size-4" />} title="Profile" />
       <SettingsBody>
         <SettingsTitle title="Profile" description="Manage your personal details." />
-
-        <SettingsNote>Changes to your profile apply to all of your workspaces.</SettingsNote>
 
         <SettingsGroup>
           <div className="space-y-6">

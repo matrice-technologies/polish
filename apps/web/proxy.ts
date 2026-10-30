@@ -40,15 +40,12 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  // /invite handles its own auth: it needs to render "expired" or "wrong
-  // account" for a signed-out visitor rather than bounce them to a login page
-  // that explains nothing. "/" is the landing page when signed out and a
-  // redirect into the workspace when not, so it decides for itself too.
+  // "/" is the landing page when signed out and a redirect to the prompts when
+  // not, so it decides for itself.
   const isPublicRoute =
     pathname === "/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/invite") ||
     pathname.startsWith("/download") ||
     pathname.startsWith("/privacy") ||
     pathname.startsWith("/terms")

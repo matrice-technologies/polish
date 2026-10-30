@@ -20,9 +20,8 @@ function Command({
   return (
     <CommandPrimitive
       data-slot="command"
-      // Radius and padding track DropdownMenuContent: the workspace switcher
-      // and this one are the same control in two different primitives, so the
-      // geometry has to agree.
+      // Radius and padding track DropdownMenuContent, so a command list and a
+      // dropdown menu read as the same control in two different primitives.
       className={cn(
         "flex size-full flex-col overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground",
         className
@@ -134,7 +133,7 @@ function CommandGroup({
       data-slot="command-group"
       className={cn(
         // Unpadded, like DropdownMenuGroup: Command's own p-1 is the only inset,
-        // so an item here lands on the same line as an item in the workspace menu.
+        // so an item here lands on the same line as an item in a dropdown menu.
         "overflow-hidden text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-muted-foreground",
         className
       )}
