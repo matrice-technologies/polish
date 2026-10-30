@@ -119,6 +119,27 @@ machines that started offline don't each upload a copy.
 From then on the app talks to Supabase directly under RLS. The web app is not
 involved in syncing.
 
+## Design
+
+Both apps are one design system: shadcn on Base UI ("base-mira", the
+boilerplate's style), Tailwind v4, Inter and Geist Mono, with Polish blue as
+the only hue. The tokens live once, in `packages/shared/src/theme.css`, and
+both apps import it, so they can't drift. The desktop renderer has its own
+`components.json` and the same `@/` alias as the web app, so a component added
+with `npx shadcn add` (or copied from `apps/web/components/ui`) works
+unchanged in both.
+
+The desktop window has no OS title bar. The top strip is the drag area, holding
+the app name and the current page's title and actions, and the native caption
+buttons are overlaid on it (Windows, Linux) or the traffic lights inset into it
+(macOS), so Windows 11 snap layouts still work.
+
+The logo, a P whose bar trails a flame, is drawn in
+`apps/desktop/resources/icon.svg` (tile) and `glyph.svg` (bare mark).
+`npm run icons --workspace @polish/desktop` renders the app, installer and
+tray icons from them. The web app's `components/logo.tsx` and `app/icon.svg`
+use the same paths.
+
 ## Database
 
 `supabase/migrations/00000000000004_polish.sql` adds:

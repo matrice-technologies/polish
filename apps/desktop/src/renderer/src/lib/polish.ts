@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 
-import type { AppState, PolishApi } from "../../common/types"
+import type { AppState, PolishApi } from "../../../common/types"
 
 declare global {
   interface Window {

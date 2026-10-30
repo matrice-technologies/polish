@@ -10,6 +10,9 @@ function subscribe<T extends unknown[]>(channel: string, listener: (...args: T) 
 }
 
 const api: PolishApi = {
+  env: {
+    platform: process.platform === "darwin" ? "mac" : process.platform === "win32" ? "windows" : "linux",
+  },
   getState: () => ipcRenderer.invoke(IPC.getState),
   onState: (listener) => subscribe<[AppState]>(IPC.state, listener),
 

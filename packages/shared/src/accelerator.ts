@@ -206,13 +206,16 @@ const PC_LABELS: Record<Modifier, string> = {
   Super: "Win",
 }
 
+/** Each key of a shortcut as it should appear on a keycap: ["Ctrl", "Shift", "1"] or ["⌘", "⇧", "1"]. */
+export function acceleratorKeys(accelerator: string, platform: Platform): string[] {
+  const parsed = parseAccelerator(accelerator)
+  if (!parsed) return [accelerator]
+  const key = parsed.key.startsWith("num") ? `Num ${parsed.key.slice(3)}` : parsed.key
+  const labels = platform === "mac" ? MAC_SYMBOLS : PC_LABELS
+  return [...parsed.modifiers.map((m) => labels[m]), key]
+}
+
 /** Human-readable form: "⌘⇧1" on macOS, "Ctrl+Shift+1" elsewhere. */
 export function formatAccelerator(accelerator: string, platform: Platform): string {
-  const parsed = parseAccelerator(accelerator)
-  if (!parsed) return accelerator
-  const key = parsed.key.startsWith("num") ? `Num ${parsed.key.slice(3)}` : parsed.key
-  if (platform === "mac") {
-    return parsed.modifiers.map((m) => MAC_SYMBOLS[m]).join("") + key
-  }
-  return [...parsed.modifiers.map((m) => PC_LABELS[m]), key].join("+")
+  return acceleratorKeys(accelerator, platform).join(platform === "mac" ? "" : "+")
 }

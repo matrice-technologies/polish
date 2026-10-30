@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react"
-import { X } from "lucide-react"
-import { acceleratorFromKeyStroke, formatAccelerator, type Platform } from "@polish/shared"
+import { Keyboard, X } from "lucide-react"
+import { acceleratorFromKeyStroke, type Platform } from "@polish/shared"
 
-import { polish } from "../api"
-import { cn } from "./ui"
+import { Button } from "@/components/ui/button"
+import { Shortcut } from "@/components/kbd"
+import { polish } from "@/lib/polish"
+import { cn } from "@/lib/utils"
 
 /**
  * Click, press the chord. While recording, the app's global shortcuts are
@@ -16,6 +18,7 @@ export function ShortcutRecorder({
   platform,
   placeholder = "No shortcut",
   error,
+  className,
 }: {
   id?: string
   value: string | null
@@ -23,6 +26,7 @@ export function ShortcutRecorder({
   platform: Platform
   placeholder?: string
   error?: string
+  className?: string
 }) {
   const [recording, setRecording] = useState(false)
   const [hint, setHint] = useState<string | null>(null)
@@ -32,12 +36,15 @@ export function ShortcutRecorder({
   }, [recording])
   useEffect(() => () => polish.setRecording(false), [])
 
+  const message = hint ?? (!recording ? error : undefined)
+
   return (
-    <div className="space-y-1">
+    <div className={cn("space-y-1.5", className)}>
       <div className="flex items-center gap-1">
         <button
           id={id}
           type="button"
+          aria-invalid={Boolean(message) || undefined}
           onClick={() => {
             setRecording(true)
             setHint(null)
@@ -56,33 +63,29 @@ export function ShortcutRecorder({
             }
           }}
           className={cn(
-            "border-input flex h-8 min-w-44 items-center rounded-md border px-2.5 font-mono text-xs outline-none",
-            "focus-visible:border-primary focus-visible:ring-primary/30 focus-visible:ring-2",
-            recording && "border-primary ring-primary/30 ring-2",
-            error && !recording && "border-destructive",
+            // The boilerplate Input's box (mira: h-7, xs text), so it sits in a form unnoticed.
+            "flex h-7 min-w-44 items-center gap-2 rounded-md border border-input bg-input/20 px-2 text-xs/relaxed transition-colors outline-none dark:bg-input/30",
+            "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
+            "aria-invalid:border-destructive aria-invalid:ring-2 aria-invalid:ring-destructive/20",
+            recording && "border-ring ring-2 ring-ring/30",
           )}
         >
+          <Keyboard className="size-3.5 shrink-0 text-muted-foreground" />
           {recording ? (
-            <span className="text-muted-foreground font-sans">Press a shortcut…</span>
+            <span className="text-muted-foreground">Press a shortcut…</span>
           ) : value ? (
-            formatAccelerator(value, platform)
+            <Shortcut accelerator={value} platform={platform} />
           ) : (
-            <span className="text-muted-foreground font-sans">{placeholder}</span>
+            <span className="text-muted-foreground">{placeholder}</span>
           )}
         </button>
         {value && !recording ? (
-          <button
-            type="button"
-            aria-label="Clear shortcut"
-            onClick={() => onChange(null)}
-            className="hover:bg-muted text-muted-foreground flex size-7 items-center justify-center rounded-md"
-          >
-            <X className="size-3.5" />
-          </button>
+          <Button type="button" variant="ghost" size="icon" aria-label="Clear shortcut" onClick={() => onChange(null)}>
+            <X />
+          </Button>
         ) : null}
       </div>
-      {hint ? <p className="text-destructive text-xs">{hint}</p> : null}
-      {!hint && error ? <p className="text-destructive text-xs">{error}</p> : null}
+      {message ? <p className="text-xs text-destructive">{message}</p> : null}
     </div>
   )
 }

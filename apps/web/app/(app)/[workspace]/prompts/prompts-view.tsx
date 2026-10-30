@@ -4,14 +4,13 @@ import { useState, useTransition } from "react"
 import { Keyboard, Loader2, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import {
-  formatAccelerator,
   shortcutConflicts,
   type Prompt,
   type SyncedSettings,
 } from "@polish/shared"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Shortcut } from "@/components/kbd"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -74,9 +73,7 @@ export function PromptsView({ prompts, settings }: { prompts: Prompt[]; settings
               ) : null}
             </div>
             {prompt.shortcut ? (
-              <Badge variant="outline" className="shrink-0 font-mono">
-                {formatAccelerator(prompt.shortcut, platform)}
-              </Badge>
+              <Shortcut accelerator={prompt.shortcut} platform={platform} className="shrink-0" />
             ) : (
               <span className="text-muted-foreground shrink-0 text-xs">Picker only</span>
             )}

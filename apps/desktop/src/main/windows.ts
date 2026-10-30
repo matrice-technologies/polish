@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen } from "electron"
+import { app, BrowserWindow, nativeTheme, screen } from "electron"
 import { join } from "node:path"
 
 import { IPC, type HudStatus } from "../common/types"
@@ -26,6 +26,19 @@ let mainWindow: BrowserWindow | null = null
 let quitting = false
 app.on("before-quit", () => (quitting = true))
 
+/** Height of the custom title bar, which the native window controls sit in. */
+export const TITLE_BAR_HEIGHT = 48
+
+/** Native minimise / maximise / close, drawn over our own title bar (Windows and Linux). */
+function titleBarOverlay(): Electron.TitleBarOverlay {
+  const dark = nativeTheme.shouldUseDarkColors
+  return {
+    color: "#00000000",
+    symbolColor: dark ? "#fafafa" : "#0a0a0a",
+    height: TITLE_BAR_HEIGHT,
+  }
+}
+
 export function showMainWindow() {
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore()
@@ -34,33 +47,46 @@ export function showMainWindow() {
     return mainWindow
   }
 
+  const isMac = process.platform === "darwin"
   mainWindow = new BrowserWindow({
-    width: 980,
-    height: 680,
-    minWidth: 760,
-    minHeight: 520,
+    width: 1040,
+    height: 700,
+    // Above the shadcn sidebar's mobile breakpoint, so it never collapses to a sheet.
+    minWidth: 820,
+    minHeight: 540,
     title: "Polish",
     icon: appIcon(),
     show: false,
-    autoHideMenuBar: true,
-    backgroundColor: "#0b0b0f",
+    // No OS title bar: the app draws its own, with the native controls kept —
+    // traffic lights on macOS, an overlay of the caption buttons elsewhere,
+    // which keeps Windows 11's snap layouts working.
+    titleBarStyle: "hidden",
+    ...(isMac ? { trafficLightPosition: { x: 18, y: 17 } } : { titleBarOverlay: titleBarOverlay() }),
+    // The page's own background (shadcn --background), so there is no flash before it paints.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0a0a0a" : "#ffffff",
     webPreferences: { preload: preload(), sandbox: true },
   })
-  mainWindow.once("ready-to-show", () => mainWindow?.show())
+  const window = mainWindow
+  if (!isMac) {
+    const syncOverlay = () => !window.isDestroyed() && window.setTitleBarOverlay(titleBarOverlay())
+    nativeTheme.on("updated", syncOverlay)
+    window.on("closed", () => nativeTheme.off("updated", syncOverlay))
+  }
+  window.once("ready-to-show", () => window.show())
   // On macOS the dock icon comes and goes with the window: a tray app the
   // rest of the time, a normal app while you are setting it up.
-  if (process.platform === "darwin") {
-    mainWindow.on("show", () => void app.dock?.show())
-    mainWindow.on("hide", () => app.dock?.hide())
+  if (isMac) {
+    window.on("show", () => void app.dock?.show())
+    window.on("hide", () => app.dock?.hide())
   }
   // Closing hides: Polish lives in the tray, and the shortcuts must keep working.
-  mainWindow.on("close", (event) => {
+  window.on("close", (event) => {
     if (quitting) return
     event.preventDefault()
-    mainWindow?.hide()
+    window.hide()
   })
-  load(mainWindow, "index")
-  return mainWindow
+  load(window, "index")
+  return window
 }
 
 export function getMainWindow() {

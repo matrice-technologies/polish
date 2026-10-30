@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { X } from "lucide-react"
-import { acceleratorFromKeyStroke, formatAccelerator } from "@polish/shared"
+import { acceleratorFromKeyStroke } from "@polish/shared"
 
 import { Button } from "@/components/ui/button"
+import { Shortcut } from "@/components/kbd"
 import { usePlatform } from "@/hooks/use-platform"
 import { cn } from "@/lib/utils"
 
@@ -55,7 +56,7 @@ export function ShortcutRecorder({
             }
           }}
           className={cn(
-            "border-input bg-input/20 dark:bg-input/30 flex h-7 min-w-40 items-center rounded-md border px-2 font-mono text-xs outline-none",
+            "border-input bg-input/20 dark:bg-input/30 flex h-7 min-w-40 items-center rounded-md border px-2 text-xs/relaxed outline-none",
             "focus-visible:border-ring focus-visible:ring-ring/30 focus-visible:ring-2",
             recording && "border-ring ring-ring/30 ring-2",
           )}
@@ -63,7 +64,7 @@ export function ShortcutRecorder({
           {recording ? (
             <span className="text-muted-foreground">Press a shortcut…</span>
           ) : value ? (
-            formatAccelerator(value, platform)
+            <Shortcut accelerator={value} platform={platform} />
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}

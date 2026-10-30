@@ -2,69 +2,179 @@ import "./styles.css"
 
 import { StrictMode, useState } from "react"
 import { createRoot } from "react-dom/client"
-import { Cloud, Settings, Sparkles, UserCircle } from "lucide-react"
+import { CircleUser, Cloud, CloudOff, Settings, Sparkles } from "lucide-react"
+import { providerInfo } from "../../common/providers"
+import type { AppState } from "../../common/types"
 
-import { useAppState } from "./api"
-import { cn } from "./components/ui"
-import { AccountPage } from "./pages/account"
-import { PromptsPage } from "./pages/prompts"
-import { SettingsPage } from "./pages/settings"
+import { Logo } from "@/components/logo"
+import { TitleBarSlot } from "@/components/page-header"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+} from "@/components/ui/sidebar"
+import { Switch } from "@/components/ui/switch"
+import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { useDarkClass } from "@/hooks/use-system-theme"
+import { polish, useAppState } from "@/lib/polish"
+import { cn } from "@/lib/utils"
+import { AccountPage } from "@/pages/account"
+import { PromptsPage } from "@/pages/prompts"
+import { SettingsPage } from "@/pages/settings"
 
-type Tab = "prompts" | "settings" | "account"
+export type Page = "prompts" | "settings" | "account"
 
+const isMac = polish.env.platform === "mac"
+
+/**
+ * The window has no OS title bar. The top 48px are a drag strip: the sidebar
+ * header on the left, the current page's title and actions beside it, and the
+ * native window controls drawn over the right end (Windows, Linux) — macOS
+ * puts its traffic lights in the sidebar header instead.
+ */
 function App() {
+  useDarkClass()
   const state = useAppState()
-  const [tab, setTab] = useState<Tab>("prompts")
+  const [page, setPage] = useState<Page>("prompts")
+  const [titleBar, setTitleBar] = useState<HTMLElement | null>(null)
   if (!state) return null
 
+  return (
+    <TooltipProvider>
+      <SidebarProvider className="h-svh min-h-0">
+        <AppSidebar state={state} page={page} onNavigate={setPage} />
+        <TitleBarSlot.Provider value={titleBar}>
+          <SidebarInset className="min-h-0 overflow-hidden ring-1 ring-border md:peer-data-[variant=inset]:mt-12">
+            {page === "prompts" ? <PromptsPage state={state} /> : null}
+            {page === "settings" ? <SettingsPage state={state} /> : null}
+            {page === "account" ? <AccountPage state={state} /> : null}
+          </SidebarInset>
+        </TitleBarSlot.Provider>
+        <div
+          ref={setTitleBar}
+          className={cn(
+            "drag fixed top-0 right-0 left-(--sidebar-width) flex h-12 items-center px-3",
+            // Room for the caption buttons the OS draws over this corner.
+            !isMac && "pr-38",
+          )}
+        />
+      </SidebarProvider>
+      <Toaster position="bottom-right" />
+    </TooltipProvider>
+  )
+}
+
+function AppSidebar({
+  state,
+  page,
+  onNavigate,
+}: {
+  state: AppState
+  page: Page
+  onNavigate: (page: Page) => void
+}) {
   const needsSetup = !state.ai.ready || state.accessibility === "missing"
-  const items: { id: Tab; label: string; icon: typeof Sparkles; badge?: boolean }[] = [
-    { id: "prompts", label: "Prompts", icon: Sparkles },
-    { id: "settings", label: "Settings", icon: Settings, badge: needsSetup },
-    { id: "account", label: "Account", icon: UserCircle },
+  const items: { id: Page; label: string; icon: typeof Sparkles; badge?: React.ReactNode }[] = [
+    { id: "prompts", label: "Prompts", icon: Sparkles, badge: state.prompts.length },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+      badge: needsSetup ? <span className="size-1.5 rounded-full bg-destructive" aria-label="Needs setup" /> : null,
+    },
+    { id: "account", label: "Account", icon: CircleUser },
   ]
 
   return (
-    <div className="flex h-full">
-      <nav className="bg-card flex w-48 shrink-0 flex-col border-r p-2">
-        <div className="flex items-center gap-2 px-2.5 pt-2 pb-4">
-          <div className="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-            <Sparkles className="size-3.5" />
-          </div>
-          <span className="text-sm font-semibold">Polish</span>
-        </div>
-        {items.map(({ id, label, icon: Icon, badge }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px]",
-              tab === id ? "bg-muted font-medium" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-            )}
-          >
-            <Icon className="size-3.5" />
-            {label}
-            {badge ? <span className="bg-destructive ml-auto size-1.5 rounded-full" /> : null}
-          </button>
-        ))}
-        <div className="text-muted-foreground mt-auto flex items-center gap-1.5 px-2.5 py-2 text-xs">
+    // Inset: the sidebar sits on the window backdrop and the page is a raised
+    // panel beside it. No padding, so its header lines up with the drag strip.
+    <Sidebar variant="inset" className="p-0">
+      <SidebarHeader className={cn("drag h-12 flex-row items-center gap-2 px-4", isMac && "pl-20")}>
+        <Logo className="size-5" />
+        <span className="font-heading text-sm font-semibold tracking-tight">Polish</span>
+      </SidebarHeader>
+
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarMenu>
+            {items.map(({ id, label, icon: Icon, badge }) => (
+              <SidebarMenuItem key={id}>
+                <SidebarMenuButton isActive={page === id} onClick={() => onNavigate(id)}>
+                  <Icon />
+                  <span>{label}</span>
+                </SidebarMenuButton>
+                {badge ? <SidebarMenuBadge>{badge}</SidebarMenuBadge> : null}
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="gap-1 pb-3">
+        <SidebarGroupLabel>Status</SidebarGroupLabel>
+        <StatusRow
+          tone={state.ai.ready ? "ok" : "warn"}
+          label={providerInfo(state.ai.settings.provider).label}
+          detail={state.ai.ready ? "Ready" : "Needs setup"}
+          onClick={() => onNavigate("settings")}
+        />
+        <label className="flex h-8 cursor-pointer items-center justify-between gap-2 rounded-md px-2 text-xs/relaxed text-sidebar-foreground hover:bg-sidebar-accent">
+          <span>{state.shortcutsPaused ? "Shortcuts paused" : "Shortcuts on"}</span>
+          <Switch size="sm" checked={!state.shortcutsPaused} onCheckedChange={(on) => polish.setPaused(!on)} />
+        </label>
+        <button
+          type="button"
+          onClick={() => onNavigate("account")}
+          className="flex h-8 items-center gap-2 rounded-md px-2 text-left text-xs/relaxed text-sidebar-foreground hover:bg-sidebar-accent"
+        >
           {state.account.state === "signed-in" ? (
             <>
-              <Cloud className="size-3" />
+              <Cloud className="size-3.5 shrink-0 text-primary" />
               <span className="truncate">{state.account.email}</span>
             </>
           ) : (
-            "Offline mode"
+            <>
+              <CloudOff className="size-3.5 shrink-0 text-muted-foreground" />
+              <span>Offline · not syncing</span>
+            </>
           )}
-        </div>
-      </nav>
-      <main className="min-w-0 flex-1">
-        {tab === "prompts" ? <PromptsPage state={state} /> : null}
-        {tab === "settings" ? <SettingsPage state={state} /> : null}
-        {tab === "account" ? <AccountPage state={state} /> : null}
-      </main>
-    </div>
+        </button>
+      </SidebarFooter>
+    </Sidebar>
+  )
+}
+
+function StatusRow({
+  tone,
+  label,
+  detail,
+  onClick,
+}: {
+  tone: "ok" | "warn"
+  label: string
+  detail: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-8 items-center gap-2 rounded-md px-2 text-left text-xs/relaxed text-sidebar-foreground hover:bg-sidebar-accent"
+    >
+      <span className={cn("size-1.5 shrink-0 rounded-full", tone === "ok" ? "bg-emerald-500" : "bg-amber-500")} />
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      <span className="text-muted-foreground">{detail}</span>
+    </button>
   )
 }
 

@@ -13,6 +13,8 @@ export default defineConfig({
   preload: {},
   renderer: {
     plugins: [react(), tailwindcss()],
+    // Same alias as the web app, so shadcn components move between them unchanged.
+    resolve: { alias: { "@": resolve(__dirname, "src/renderer/src") } },
     build: {
       rollupOptions: {
         input: {

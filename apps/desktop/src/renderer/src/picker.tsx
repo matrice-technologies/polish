@@ -2,31 +2,33 @@ import "./styles.css"
 
 import { useEffect, useRef, useState } from "react"
 import { createRoot } from "react-dom/client"
-import { Search } from "lucide-react"
-import { formatAccelerator, type Platform } from "@polish/shared"
-
 import type { PickerItem } from "../../common/types"
-import { polish } from "./api"
-import { cn } from "./components/ui"
+
+import { Shortcut } from "@/components/kbd"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { useDarkClass } from "@/hooks/use-system-theme"
+import { polish } from "@/lib/polish"
 
 /**
- * The prompt picker. The selection has already been copied by the time this
- * opens; choosing a prompt hides the picker, focus goes back to the app the
- * text came from, and the result is pasted there.
+ * The prompt picker: shadcn's command palette, floating over whatever app the
+ * text came from. The selection was copied before this opened; choosing a
+ * prompt hides the picker, focus returns, and the result is pasted there.
  */
 function Picker() {
+  useDarkClass()
   const [items, setItems] = useState<PickerItem[]>([])
-  const [platform, setPlatform] = useState<Platform>("windows")
   const [query, setQuery] = useState("")
-  const [active, setActive] = useState(0)
+  const [value, setValue] = useState("")
   const input = useRef<HTMLInputElement>(null)
+  const { platform } = polish.env
 
   useEffect(() => {
     const refresh = () => {
       setQuery("")
-      setActive(0)
-      void polish.getPickerItems().then(setItems)
-      void polish.getState().then((state) => setPlatform(state.platform))
+      void polish.getPickerItems().then((next) => {
+        setItems(next)
+        setValue(next[0]?.id ?? "")
+      })
       input.current?.focus()
     }
     refresh()
@@ -40,58 +42,40 @@ function Picker() {
     return () => window.removeEventListener("blur", onBlur)
   }, [])
 
-  const filtered = items.filter((item) => item.name.toLowerCase().includes(query.trim().toLowerCase()))
-  const choose = (item: PickerItem | undefined) => item && polish.pick(item.id)
-
   return (
     <div className="flex h-full items-start justify-center p-3">
-      <div
-        className="bg-background flex max-h-full w-full flex-col overflow-hidden rounded-xl border shadow-2xl"
+      <Command
+        value={value}
+        onValueChange={setValue}
+        className="h-auto max-h-full rounded-xl border shadow-2xl"
         onKeyDown={(event) => {
           if (event.key === "Escape") polish.cancelPick()
-          else if (event.key === "ArrowDown") setActive((i) => Math.min(i + 1, filtered.length - 1))
-          else if (event.key === "ArrowUp") setActive((i) => Math.max(i - 1, 0))
-          else if (event.key === "Enter") choose(filtered[active])
-          else if (/^[1-9]$/.test(event.key) && !query) choose(filtered[Number(event.key) - 1])
-          else return
-          event.preventDefault()
+          // 1–9 picks by position while the search box is empty.
+          if (!query && /^[1-9]$/.test(event.key)) {
+            const item = items[Number(event.key) - 1]
+            if (item) {
+              event.preventDefault()
+              polish.pick(item.id)
+            }
+          }
         }}
       >
-        <div className="flex items-center gap-2 border-b px-3">
-          <Search className="text-muted-foreground size-3.5" />
-          <input
-            ref={input}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value)
-              setActive(0)
-            }}
-            placeholder="Polish with…"
-            className="placeholder:text-muted-foreground h-10 flex-1 bg-transparent text-[13px] outline-none"
-          />
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
-          {filtered.map((item, index) => (
-            <button
-              key={item.id}
-              type="button"
-              onMouseEnter={() => setActive(index)}
-              onClick={() => choose(item)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left text-[13px]",
-                index === active && "bg-muted",
-              )}
-            >
-              <span className="text-muted-foreground w-3 font-mono text-xs">{!query && index < 9 ? index + 1 : ""}</span>
-              <span className="flex-1 truncate">{item.name}</span>
-              {item.shortcut ? (
-                <span className="text-muted-foreground font-mono text-xs">{formatAccelerator(item.shortcut, platform)}</span>
-              ) : null}
-            </button>
-          ))}
-          {filtered.length === 0 ? <p className="text-muted-foreground px-3 py-6 text-center text-xs">No matching prompt.</p> : null}
-        </div>
-      </div>
+        <CommandInput ref={input} value={query} onValueChange={setQuery} placeholder="Polish with…" />
+        <CommandList className="max-h-72">
+          <CommandEmpty>No matching prompt.</CommandEmpty>
+          <CommandGroup>
+            {items.map((item, index) => (
+              <CommandItem key={item.id} value={item.id} keywords={[item.name]} onSelect={() => polish.pick(item.id)}>
+                <span className="w-3 text-center font-mono text-[11px] text-muted-foreground">
+                  {!query && index < 9 ? index + 1 : ""}
+                </span>
+                <span className="flex-1 truncate">{item.name}</span>
+                {item.shortcut ? <Shortcut accelerator={item.shortcut} platform={platform} /> : null}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </Command>
     </div>
   )
 }

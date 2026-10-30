@@ -46,7 +46,13 @@ export interface PickerItem {
   shortcut: string | null
 }
 
+export interface PolishEnv {
+  platform: "mac" | "windows" | "linux"
+}
+
 export interface PolishApi {
+  /** Known before the first render, so the title bar can lay itself out. */
+  env: PolishEnv
   getState(): Promise<AppState>
   onState(listener: (state: AppState) => void): () => void
 

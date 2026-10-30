@@ -5,10 +5,15 @@ directories:
   output: release/${version}
 files:
   - out/**
+  - resources/**
+  - "!resources/*.svg"
   - package.json
-# Native addon: must sit outside the asar to be loadable.
+# The native addon must sit outside the asar to be loadable, and the tray
+# icons are read from disk by the OS.
 asarUnpack:
   - "**/node_modules/uiohook-napi/**"
+  - resources/**
+icon: resources/icon.png
 win:
   target: nsis
 nsis:

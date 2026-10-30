@@ -1,82 +1,50 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@polish/shared/theme.css";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/geist-mono";
 
 /*
- * The same neutral-plus-violet palette as the web app, as plain tokens: the
- * desktop app follows the OS theme rather than offering its own switch.
+ * The desktop app's own layer on top of the shared tokens. The web app gets
+ * Inter and Geist Mono from next/font; here they are bundled, so the app looks
+ * the same with no network.
  */
 :root {
-  --background: #ffffff;
-  --foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --card: #fafafa;
-  --primary: #7c3aed;
-  --primary-foreground: #ffffff;
-  --destructive: #dc2626;
-  --success: #16a34a;
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b0b0f;
-    --foreground: #fafafa;
-    --muted: #18181b;
-    --muted-foreground: #a1a1aa;
-    --border: #27272a;
-    --input: #3f3f46;
-    --card: #111116;
-    --primary: #8b5cf6;
-    --primary-foreground: #ffffff;
-    --destructive: #f87171;
-    --success: #4ade80;
-    color-scheme: dark;
-  }
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-card: var(--card);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-destructive: var(--destructive);
-  --color-success: var(--success);
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, monospace;
 }
 
 @layer base {
-  * {
-    border-color: var(--border);
-  }
   html,
   body,
   #root {
     height: 100%;
   }
   body {
-    margin: 0;
-    font-family: var(--font-sans);
-    font-size: 13px;
-    background: var(--background);
-    color: var(--foreground);
-    -webkit-font-smoothing: antialiased;
-    user-select: none;
+    @apply antialiased select-none;
+    font-size: 14px;
   }
   input,
-  textarea {
-    user-select: text;
+  textarea,
+  [data-selectable] {
+    @apply select-text;
+  }
+  /* Thin, arrowless scrollbars in the theme's border colour, not Windows' default. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
   }
   /* The HUD and the picker float over other apps: no page background. */
   body.hud,
   body.picker {
     background: transparent;
   }
+}
+
+@utility drag {
+  -webkit-app-region: drag;
+}
+@utility no-drag {
+  -webkit-app-region: no-drag;
 }

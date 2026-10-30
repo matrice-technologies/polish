@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useId, useState } from "react"
 import { Check, Copy, ExternalLink, KeyRound, Loader2, LogIn, Play, RefreshCw, Terminal } from "lucide-react"
-
+import { toast } from "sonner"
 import { PROVIDERS, providerInfo, type CliStatus, type ProviderId } from "../../../common/providers"
 import type { AppState } from "../../../common/types"
-import { polish } from "../api"
-import { Button, cn, Input } from "./ui"
+
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { polish } from "@/lib/polish"
+import { cn } from "@/lib/utils"
 
 /**
  * Choosing where rewrites go: the Claude subscription through Claude Code, or
@@ -16,64 +24,72 @@ export function AiProviderSection({ state }: { state: AppState }) {
   const info = providerInfo(selected)
 
   const usable = (id: ProviderId) =>
-    id === "claude-cli"
-      ? ai.cli.state === "ready"
-      : providerInfo(id).key !== "required" || Boolean(ai.keys[id])
+    id === "claude-cli" ? ai.cli.state === "ready" : providerInfo(id).key !== "required" || Boolean(ai.keys[id])
 
   return (
-    <section className="space-y-4 py-4">
-      <div>
-        <p className="text-[13px] font-medium">AI provider</p>
-        <p className="text-muted-foreground text-xs leading-relaxed">
-          Where your text is sent to be rewritten. Set per computer; keys stay on this one and never sync.
-        </p>
+    <div className="space-y-4">
+      <div role="radiogroup" aria-label="AI provider" className="grid grid-cols-2 gap-2">
+        {PROVIDERS.map((provider) => {
+          const active = selected === provider.id
+          return (
+            <button
+              key={provider.id}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => void polish.updateAi({ provider: provider.id })}
+              className={cn(
+                "group/provider relative rounded-lg border bg-card px-3 py-2.5 text-left transition-all outline-none",
+                "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
+                active ? "border-primary ring-2 ring-primary/20" : "hover:border-foreground/20 hover:bg-accent/40",
+              )}
+            >
+              <span className="flex items-center gap-1.5 pr-5 text-xs/relaxed font-medium">
+                {provider.label}
+                {usable(provider.id) ? (
+                  <span
+                    className="size-1.5 rounded-full bg-emerald-500"
+                    title={provider.id === "claude-cli" ? "Signed in" : provider.key === "required" ? "Key saved" : "Available"}
+                  />
+                ) : null}
+              </span>
+              <span className="block text-[11px] leading-snug text-muted-foreground">{provider.hint}</span>
+              <span
+                className={cn(
+                  "absolute top-2.5 right-2.5 flex size-3.5 items-center justify-center rounded-full border transition-colors",
+                  active ? "border-primary bg-primary text-primary-foreground" : "border-input",
+                )}
+              >
+                {active ? <Check className="size-2.5" strokeWidth={3} /> : null}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        {PROVIDERS.map((provider) => (
-          <button
-            key={provider.id}
-            type="button"
-            onClick={() => void polish.updateAi({ provider: provider.id })}
-            className={cn(
-              "rounded-lg border px-3 py-2.5 text-left transition-colors",
-              selected === provider.id ? "border-primary bg-primary/5 ring-primary/30 ring-1" : "hover:bg-muted/60",
-            )}
-          >
-            <span className="flex items-center gap-1.5 text-[13px] font-medium">
-              {provider.label}
-              {usable(provider.id) ? (
-                <span
-                  className="bg-success size-1.5 rounded-full"
-                  title={provider.id === "claude-cli" ? "Signed in" : provider.key === "required" ? "Key saved" : "Available"}
-                />
-              ) : null}
-            </span>
-            <span className="text-muted-foreground block text-xs leading-snug">{provider.hint}</span>
-          </button>
-        ))}
-      </div>
+      <Card>
+        <CardContent className="space-y-4">
+          {selected === "claude-cli" ? (
+            <ClaudeCliPanel cli={ai.cli} platform={platform} claudePath={ai.settings.claudePath} />
+          ) : (
+            <KeyField provider={selected} hasKey={Boolean(ai.keys[selected])} />
+          )}
 
-      <div className="bg-card space-y-4 rounded-lg border p-4">
-        {selected === "claude-cli" ? (
-          <ClaudeCliPanel cli={ai.cli} platform={platform} claudePath={ai.settings.claudePath} />
-        ) : (
-          <KeyField provider={selected} hasKey={Boolean(ai.keys[selected])} />
-        )}
+          {selected === "openai-compatible" ? <BaseUrlField value={ai.settings.customBaseUrl} /> : null}
 
-        {selected === "openai-compatible" ? <BaseUrlField value={ai.settings.customBaseUrl} /> : null}
+          <ModelField
+            key={selected}
+            provider={selected}
+            value={ai.settings.models[selected] ?? info.defaultModel ?? ""}
+            canList={selected !== "claude-cli" && (info.key !== "required" || Boolean(ai.keys[selected]))}
+            baseUrl={ai.settings.customBaseUrl}
+          />
 
-        <ModelField
-          key={selected}
-          provider={selected}
-          value={ai.settings.models[selected] ?? info.defaultModel ?? ""}
-          canList={selected !== "claude-cli" && (info.key !== "required" || Boolean(ai.keys[selected]))}
-          baseUrl={ai.settings.customBaseUrl}
-        />
-
-        <TestRow ready={ai.ready} problem={ai.problem} provider={selected} />
-      </div>
-    </section>
+          <Separator />
+          <TestRow ready={ai.ready} problem={ai.problem} provider={selected} />
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
@@ -97,17 +113,17 @@ function ClaudeCliPanel({
   return (
     <div className="space-y-3">
       {cli.state === "checking" ? (
-        <p className="text-muted-foreground flex items-center gap-2 text-xs">
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <Loader2 className="size-3.5 animate-spin" /> Looking for Claude Code…
         </p>
       ) : null}
 
       {cli.state === "missing" ? (
         <>
-          <p className="text-xs leading-relaxed">
+          <p className="text-xs/relaxed">
             Polish uses your Claude plan through <span className="font-medium">Claude Code</span>, which isn&rsquo;t
-            installed on this computer. Install it from a {platform === "windows" ? "PowerShell" : "terminal"} window,
-            then sign in:
+            installed on this computer. Install it from {platform === "windows" ? "PowerShell" : "a terminal"}, then
+            sign in:
           </p>
           <CommandLine command={INSTALL[platform]} />
           <div className="flex gap-2">
@@ -123,9 +139,9 @@ function ClaudeCliPanel({
 
       {cli.state === "logged-out" ? (
         <>
-          <p className="text-xs leading-relaxed">
-            Found Claude Code {cli.version}, but it isn&rsquo;t signed in. Sign in with the Claude account that has your
-            Pro or Max plan — a terminal window opens for it, and Polish picks it up as soon as you&rsquo;re done.
+          <p className="text-xs/relaxed">
+            Found Claude Code {cli.version}, but it isn&rsquo;t signed in. Sign in with the account that has your Pro or
+            Max plan. A terminal opens for it, and Polish picks it up as soon as you&rsquo;re done.
           </p>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => polish.cliLogin()}>
@@ -139,35 +155,41 @@ function ClaudeCliPanel({
       ) : null}
 
       {cli.state === "logging-in" ? (
-        <>
-          <p className="flex items-center gap-2 text-xs">
-            <Loader2 className="size-3.5 animate-spin" />
-            Finish signing in in the terminal window (and the browser page it opens). Waiting…
+        <div className="flex items-center justify-between gap-3">
+          <p className="flex items-center gap-2 text-xs/relaxed">
+            <Loader2 className="size-3.5 animate-spin text-primary" />
+            Finish signing in in the terminal window and the browser page it opens.
           </p>
           <Button size="sm" variant="ghost" onClick={() => polish.cliCancelLogin()}>
             Cancel
           </Button>
-        </>
+        </div>
       ) : null}
 
       {cli.state === "ready" ? (
-        <div className="space-y-1">
-          <p className="flex items-center gap-1.5 text-xs">
-            <Check className="text-success size-3.5" />
-            Signed in{cli.email ? ` as ${cli.email}` : ""}
-            {cli.subscription ? ` · ${cli.subscription[0].toUpperCase()}${cli.subscription.slice(1)} plan` : ""}
-          </p>
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="flex items-center gap-1.5 text-xs/relaxed font-medium">
+              <Check className="size-3.5 text-emerald-500" />
+              Signed in{cli.email ? ` as ${cli.email}` : ""}
+            </span>
+            {cli.subscription ? (
+              <Badge variant="secondary" className="capitalize">
+                {cli.subscription} plan
+              </Badge>
+            ) : null}
+          </div>
           {cli.apiBilling ? (
-            <p className="text-destructive text-xs">
+            <p className="text-xs/relaxed text-destructive">
               Claude Code is signed in to an API account, so this bills per use rather than your plan. Run{" "}
               <code className="font-mono">claude auth login</code> to switch.
             </p>
           ) : (
-            <p className="text-muted-foreground text-xs">Rewrites count against your plan&rsquo;s usage limits. No API key needed.</p>
+            <p className="text-xs/relaxed text-muted-foreground">
+              Rewrites count against your plan&rsquo;s usage. No API key needed. Claude Code {cli.version}; expect two to
+              three seconds per rewrite.
+            </p>
           )}
-          <p className="text-muted-foreground text-xs">
-            Claude Code {cli.version}. Each rewrite starts it once, so expect two or three seconds.
-          </p>
         </div>
       ) : null}
 
@@ -179,21 +201,24 @@ function ClaudeCliPanel({
 function CommandLine({ command }: { command: string }) {
   const [copied, setCopied] = useState(false)
   return (
-    <div className="bg-muted flex items-center gap-2 rounded-md px-3 py-2">
-      <Terminal className="text-muted-foreground size-3.5 shrink-0" />
-      <code className="flex-1 overflow-x-auto font-mono text-xs whitespace-nowrap select-text">{command}</code>
-      <button
+    <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2">
+      <Terminal className="size-3.5 shrink-0 text-muted-foreground" />
+      <code data-selectable className="flex-1 overflow-x-auto font-mono text-xs whitespace-nowrap">
+        {command}
+      </code>
+      <Button
         type="button"
+        variant="ghost"
+        size="icon-xs"
         aria-label="Copy command"
-        className="text-muted-foreground hover:text-foreground"
         onClick={() => {
           void navigator.clipboard.writeText(command)
           setCopied(true)
           setTimeout(() => setCopied(false), 1500)
         }}
       >
-        {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-      </button>
+        {copied ? <Check /> : <Copy />}
+      </Button>
     </div>
   )
 }
@@ -201,16 +226,18 @@ function CommandLine({ command }: { command: string }) {
 function ClaudePathField({ claudePath, found }: { claudePath: string | null; found: string | null }) {
   const [value, setValue] = useState(claudePath ?? "")
   return (
-    <details className="text-xs">
-      <summary className="text-muted-foreground cursor-pointer">
-        {found ? `Using ${found}` : "Installed somewhere unusual?"}
+    <details className="group/path text-xs">
+      <summary className="cursor-pointer list-none text-muted-foreground hover:text-foreground">
+        {found ? (
+          <>
+            Using <span className="font-mono">{found}</span>
+          </>
+        ) : (
+          "Installed somewhere unusual?"
+        )}
       </summary>
       <div className="mt-2 flex gap-2">
-        <Input
-          value={value}
-          placeholder="Full path to the claude executable"
-          onChange={(e) => setValue(e.target.value)}
-        />
+        <Input value={value} placeholder="Full path to the claude executable" onChange={(e) => setValue(e.target.value)} />
         <Button
           variant="outline"
           disabled={value.trim() === (claudePath ?? "")}
@@ -225,7 +252,7 @@ function ClaudePathField({ claudePath, found }: { claudePath: string | null; fou
 
 /* ---------------------------------------------------------------- api keys ---- */
 
-/** Shown as set or not set, never read back: the key only goes from here into the keychain. */
+/** Shown as set or not, never read back: the key only goes from here into the keychain. */
 function KeyField({ provider, hasKey }: { provider: ProviderId; hasKey: boolean }) {
   const info = providerInfo(provider)
   const [editing, setEditing] = useState(!hasKey)
@@ -244,20 +271,21 @@ function KeyField({ provider, hasKey }: { provider: ProviderId; hasKey: boolean 
       setValue("")
       setEditing(false)
       setError(null)
+      toast.success(`${info.label} key saved`)
     } else setError(result.message)
   }
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <KeyRound className="text-muted-foreground size-3.5" />
-        <p className="text-[13px] font-medium">
+        <KeyRound className="size-3.5 text-muted-foreground" />
+        <Label>
           {info.label} API key{info.key === "optional" ? " (optional)" : ""}
-        </p>
+        </Label>
         {hasKey && !editing ? (
-          <span className="text-success flex items-center gap-1 text-xs">
-            <Check className="size-3" /> Saved on this computer
-          </span>
+          <Badge variant="secondary" className="gap-1">
+            <Check className="size-3 text-emerald-500" /> Saved on this computer
+          </Badge>
         ) : null}
       </div>
       {editing ? (
@@ -273,6 +301,7 @@ function KeyField({ provider, hasKey }: { provider: ProviderId; hasKey: boolean 
             value={value}
             placeholder={info.keyPlaceholder}
             autoComplete="off"
+            aria-invalid={Boolean(error) || undefined}
             onChange={(e) => setValue(e.target.value)}
           />
           <Button type="submit" disabled={!value.trim()}>
@@ -289,23 +318,28 @@ function KeyField({ provider, hasKey }: { provider: ProviderId; hasKey: boolean 
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
             Replace
           </Button>
-          <Button size="sm" variant="danger" onClick={() => void polish.setProviderKey(provider, null)}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            onClick={() => void polish.setProviderKey(provider, null)}
+          >
             Remove
           </Button>
         </div>
       )}
-      {error ? <p className="text-destructive text-xs">{error}</p> : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
       {info.keyUrl ? (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs/relaxed text-muted-foreground">
           Get one from{" "}
           <button
             type="button"
-            className="text-primary underline-offset-2 hover:underline"
+            className="text-primary underline-offset-4 hover:underline"
             onClick={() => polish.openExternal(info.keyUrl!)}
           >
             {new URL(info.keyUrl).host}
           </button>
-          . Text goes straight from this computer to {info.label}; it never passes through the Polish server.
+          . Text goes straight from this computer to {info.label}, never through the Polish server.
         </p>
       ) : null}
     </div>
@@ -316,10 +350,10 @@ function BaseUrlField({ value: saved }: { value: string }) {
   const [value, setValue] = useState(saved)
   const valid = /^https?:\/\/\S+$/.test(value.trim())
   return (
-    <div className="space-y-1.5">
-      <p className="text-[13px] font-medium">Base URL</p>
+    <div className="space-y-2">
+      <Label htmlFor="base-url">Base URL</Label>
       <div className="flex gap-2">
-        <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder="http://localhost:11434/v1" />
+        <Input id="base-url" value={value} onChange={(e) => setValue(e.target.value)} placeholder="http://localhost:11434/v1" />
         <Button
           variant="outline"
           disabled={!valid || value.trim() === saved}
@@ -328,11 +362,10 @@ function BaseUrlField({ value: saved }: { value: string }) {
           Save
         </Button>
       </div>
-      <p className="text-muted-foreground text-xs leading-relaxed">
-        The endpoint that serves <code className="font-mono">/chat/completions</code>. Ollama:{" "}
-        <code className="font-mono">http://localhost:11434/v1</code> · LM Studio:{" "}
-        <code className="font-mono">http://localhost:1234/v1</code> · OpenRouter:{" "}
-        <code className="font-mono">https://openrouter.ai/api/v1</code>
+      <p className="text-xs/relaxed text-muted-foreground">
+        Anything serving <code className="font-mono">/chat/completions</code>: Ollama{" "}
+        <code className="font-mono">localhost:11434/v1</code>, LM Studio <code className="font-mono">localhost:1234/v1</code>,
+        OpenRouter <code className="font-mono">openrouter.ai/api/v1</code>.
       </p>
     </div>
   )
@@ -369,7 +402,7 @@ function ModelField({
     else setError(result.message)
   }, [provider])
 
-  // Fetch the provider's list as soon as there is a key to fetch it with.
+  // Fetch the provider's own list as soon as there is a key to fetch it with.
   useEffect(() => {
     if (!info.models && canList) void load()
   }, [info.models, canList, baseUrl, load])
@@ -377,47 +410,51 @@ function ModelField({
   const save = (model: string) => void polish.updateAi({ models: { [provider]: model.trim() } })
 
   if (info.models) {
+    const labels = Object.fromEntries(info.models.map((m) => [m.id, m.label]))
     return (
       <div className="flex items-center justify-between gap-4">
-        <p className="text-[13px] font-medium">Model</p>
-        <select
-          value={value}
-          onChange={(e) => save(e.target.value)}
-          className="border-input bg-background h-8 rounded-md border px-2 text-[13px] outline-none"
-        >
-          {info.models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </select>
+        <Label>Model</Label>
+        <Select value={value} items={labels} onValueChange={(model) => model && save(model as string)}>
+          <SelectTrigger className="w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {info.models.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     )
   }
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-[13px] font-medium">Model</p>
+    <div className="space-y-2">
+      <Label htmlFor={`${listId}-model`}>Model</Label>
       <div className="flex gap-2">
         <Input
+          id={`${listId}-model`}
           list={listId}
           value={draft}
           placeholder={canList ? "Pick or type a model id" : "Add a key to list models"}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => draft.trim() !== value && save(draft)}
           onKeyDown={(e) => e.key === "Enter" && save(draft)}
+          className="font-mono"
         />
-        <datalist id={listId}>
-          {models?.map((m) => <option key={m} value={m} />)}
-        </datalist>
-        <Button variant="outline" disabled={!canList || loading} onClick={() => void load()} aria-label="Reload models">
+        <datalist id={listId}>{models?.map((m) => <option key={m} value={m} />)}</datalist>
+        <Button variant="outline" size="icon" disabled={!canList || loading} onClick={() => void load()} aria-label="Reload models">
           {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}
         </Button>
       </div>
       {error ? (
-        <p className="text-destructive text-xs">{error}</p>
+        <p className="text-xs text-destructive">{error}</p>
       ) : models ? (
-        <p className="text-muted-foreground text-xs">{models.length} models available from {info.label}.</p>
+        <p className="text-xs text-muted-foreground">
+          {models.length} models available from {info.label}.
+        </p>
       ) : null}
     </div>
   )
@@ -438,14 +475,19 @@ function TestRow({ ready, problem, provider }: { ready: boolean; problem: string
     setRunning(false)
     setResult(
       outcome.ok
-        ? { ok: true, text: `“${outcome.value.output}” — ${(outcome.value.ms / 1000).toFixed(1)}s` }
+        ? { ok: true, text: `“${outcome.value.output}” · ${(outcome.value.ms / 1000).toFixed(1)}s` }
         : { ok: false, text: outcome.message },
     )
   }
 
   return (
-    <div className="flex items-start justify-between gap-4 border-t pt-3">
-      <p className={cn("text-xs leading-relaxed", result ? (result.ok ? "" : "text-destructive") : "text-muted-foreground")}>
+    <div className="flex items-center justify-between gap-4">
+      <p
+        className={cn(
+          "text-xs/relaxed",
+          result ? (result.ok ? "text-foreground" : "text-destructive") : ready ? "text-muted-foreground" : "text-amber-600 dark:text-amber-500",
+        )}
+      >
         {result ? result.text : ready ? "Ready. Try it on a sample sentence." : problem}
       </p>
       <Button size="sm" variant="outline" disabled={!ready || running} onClick={() => void run()}>
