@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/.next
+**/out
+**/release
+**/dist
+**/*.tsbuildinfo
+supabase/.temp
+supabase/.branches
+.claude
+
+# Secrets never go into an image.
+**/.env
+**/.env.*
+!**/.env.example
+client_secret_*.json
