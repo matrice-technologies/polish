@@ -21,6 +21,17 @@ const output = join(root, "resources/bin/polish-hotkeys")
 
 if (existsSync(output) && statSync(output).mtimeMs > statSync(source).mtimeMs) process.exit(0)
 
+// Without Xcode's command-line tools a dev build still runs, on Electron's
+// globalShortcut; a release must not ship that way, so CI fails instead.
+try {
+  execFileSync("xcrun", ["--find", "swiftc"], { stdio: "ignore" })
+} catch {
+  const message = "swiftc not found (xcode-select --install): shortcuts will use Electron's globalShortcut"
+  if (process.env.CI) throw new Error(message)
+  console.warn(`build-hotkeys: ${message}`)
+  process.exit(0)
+}
+
 const work = mkdtempSync(join(tmpdir(), "polish-hotkeys-"))
 try {
   const slices = ["arm64", "x86_64"].map((arch) => {
