@@ -15,8 +15,13 @@ import {
   type Prompt,
 } from "../src/index.ts"
 
-const stroke = (code: string, mods: Partial<Record<"ctrlKey" | "metaKey" | "altKey" | "shiftKey", boolean>> = {}) => ({
+const stroke = (
+  code: string,
+  mods: Partial<Record<"ctrlKey" | "metaKey" | "altKey" | "shiftKey", boolean>> = {},
+  keyCode?: number,
+) => ({
   code,
+  keyCode,
   ctrlKey: false,
   metaKey: false,
   altKey: false,
@@ -32,6 +37,38 @@ test("canonicalises accelerators and rejects bare keys", () => {
   assert.equal(canonicalAccelerator("Shift+A"), null)
   assert.equal(canonicalAccelerator("Ctrl+"), null)
   assert.equal(canonicalAccelerator("Ctrl+Ctrl+A"), null)
+})
+
+test("records keys the way the OS registers them: layout key code on Windows, position on macOS", () => {
+  const ctrl = { ctrlKey: true }
+  // AZERTY: the "A" key sits at the US "Q" position; "$" at "]" and reports VK_OEM_1.
+  assert.deepEqual(acceleratorFromKeyStroke(stroke("KeyQ", ctrl, 65), "windows"), {
+    status: "done",
+    accelerator: "CommandOrControl+A",
+  })
+  assert.deepEqual(acceleratorFromKeyStroke(stroke("BracketRight", ctrl, 186), "windows"), {
+    status: "done",
+    accelerator: "CommandOrControl+;",
+  })
+  // The "&1" key types "&" but is still 1; F-keys and the numpad map through too.
+  assert.equal(acceleratorFromKeyStroke(stroke("Digit1", ctrl, 49), "windows").status, "done")
+  assert.deepEqual(acceleratorFromKeyStroke(stroke("F8", {}, 119), "windows"), { status: "done", accelerator: "F8" })
+  assert.deepEqual(acceleratorFromKeyStroke(stroke("Numpad3", ctrl, 99), "windows"), {
+    status: "done",
+    accelerator: "CommandOrControl+num3",
+  })
+  // A key Electron has no name for ("!" on AZERTY is VK_OEM_8).
+  assert.equal(acceleratorFromKeyStroke(stroke("Slash", ctrl, 223), "windows").status, "invalid")
+  // No usable key code (an IME composing): fall back to the position.
+  assert.deepEqual(acceleratorFromKeyStroke(stroke("KeyQ", ctrl, 229), "windows"), {
+    status: "done",
+    accelerator: "CommandOrControl+Q",
+  })
+  // macOS ignores the key code: shortcuts are registered by position there.
+  assert.deepEqual(acceleratorFromKeyStroke(stroke("KeyQ", { metaKey: true }, 65), "mac"), {
+    status: "done",
+    accelerator: "CommandOrControl+Q",
+  })
 })
 
 test("records keystrokes by physical key, Ctrl and ⌘ both as CommandOrControl", () => {

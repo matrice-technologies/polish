@@ -77,14 +77,20 @@ copy, and waits for the sentinel to change. The result is written back the
 same way with paste, and the snapshot is restored half a second later, once
 the target app has read the paste. Keystrokes are posted with `uiohook-napi`.
 
-**Shortcuts** (`shortcuts.ts`, `hotkeys-mac.ts`, `native/hotkeys.swift`) are
-stored by key position (`KeyboardEvent.code`), so ⌘⇧1 is the key under the
-American 1 on every layout. Windows and Linux register them with Electron's
-`globalShortcut`. macOS can't: Electron looks a key up by the character it
-types there, and on a French keyboard no key types "1" without Shift, so ⌘⇧1
-would never fire. A Swift helper registers Carbon hot keys by virtual key code
-instead, over stdin/stdout, and reports keys by position while a shortcut
-field records. Keycaps show each key as labelled on the person's layout.
+**Shortcuts** (`shortcuts.ts`, `hotkeys-mac.ts`, `native/hotkeys.swift`,
+`packages/shared/src/accelerator.ts`) are recorded the way each OS registers
+them. Windows and Linux register with Electron's `globalShortcut`, which goes
+by the layout's key code: on AZERTY the "A" key is VK_A even though it sits
+where QWERTY has Q. So there the recorder takes `KeyboardEvent.keyCode`, and
+pressing A records A. macOS can't use `globalShortcut`: Electron looks a key
+up by the character it types there, and on a French keyboard no key types "1"
+without Shift, so ⌘⇧1 would never fire. A Swift helper registers Carbon hot
+keys by virtual key code, which on a Mac is the key's position, over
+stdin/stdout, and reports keys by position while a shortcut field records; so
+there the recorder takes `KeyboardEvent.code`, and keycaps show each key as
+labelled on the person's layout. The digits mean the same key everywhere; a
+letter recorded on a Windows AZERTY keyboard lands on the QWERTY position on
+a Mac.
 
 **The model call** (`apps/desktop/src/main/engines/`,
 `packages/shared/src/polish.ts`). The prompt's instructions sit inside a fixed

@@ -3,9 +3,11 @@
  * because that is what the desktop app hands to `globalShortcut`. The web app
  * only records and displays them, so both sides share this one parser.
  *
- * Keys are taken from `KeyboardEvent.code`, the physical key, not `.key`: the
- * OS registers global shortcuts by key position, so on AZERTY the key under
- * "1" is still "1" even though typing it without Shift gives "&".
+ * A key is recorded the way the OS will register it, never by `.key`: on
+ * AZERTY the key under "1" types "&" without Shift, yet it is still "1".
+ * macOS registers by key position, so there it comes from `KeyboardEvent.code`.
+ * Windows and Linux register by the layout's key code — on AZERTY the key at
+ * the US "Q" position is "A" — so there it comes from `KeyboardEvent.keyCode`.
  */
 
 export type Platform = "mac" | "windows" | "linux"
@@ -79,6 +81,55 @@ const CODE_TO_KEY: Record<string, string> = {
   Slash: "/",
 }
 
+/**
+ * `KeyboardEvent.keyCode` → accelerator key. On Windows it is the virtual-key
+ * code, the very one Electron registers each accelerator key as.
+ */
+const KEY_CODE_TO_KEY: Record<number, string> = {
+  8: "Backspace",
+  9: "Tab",
+  13: "Enter",
+  27: "Escape",
+  32: "Space",
+  33: "PageUp",
+  34: "PageDown",
+  35: "End",
+  36: "Home",
+  37: "Left",
+  38: "Up",
+  39: "Right",
+  40: "Down",
+  45: "Insert",
+  46: "Delete",
+  186: ";",
+  187: "=",
+  188: ",",
+  189: "-",
+  190: ".",
+  191: "/",
+  192: "`",
+  219: "[",
+  220: "\\",
+  221: "]",
+  222: "'",
+}
+
+function keyFromKeyCode(keyCode: number): string | undefined {
+  if (keyCode >= 65 && keyCode <= 90) return String.fromCharCode(keyCode)
+  if (keyCode >= 48 && keyCode <= 57) return String(keyCode - 48)
+  if (keyCode >= 96 && keyCode <= 105) return `num${keyCode - 96}`
+  if (keyCode >= 112 && keyCode <= 135) return `F${keyCode - 111}`
+  return KEY_CODE_TO_KEY[keyCode]
+}
+
+function keyFromCode(code: string): string | undefined {
+  const letter = /^Key([A-Z])$/.exec(code)
+  const digit = /^Digit([0-9])$/.exec(code)
+  const numpad = /^Numpad([0-9])$/.exec(code)
+  const fn = /^F([1-9]|1[0-9]|2[0-4])$/.exec(code)
+  return CODE_TO_KEY[code] ?? letter?.[1] ?? digit?.[1] ?? (numpad ? `num${numpad[1]}` : undefined) ?? fn?.[0]
+}
+
 function normalizeKey(raw: string): string | null {
   if (/^[a-z]$/i.test(raw)) return raw.toUpperCase()
   if (/^[0-9]$/.test(raw)) return raw
@@ -139,6 +190,8 @@ export function canonicalAccelerator(accelerator: string): string | null {
 /** The subset of a KeyboardEvent this needs, so it can be called from any UI. */
 export interface KeyStroke {
   code: string
+  /** The layout's key code; 0 or missing when unknown, 229 while an IME composes. */
+  keyCode?: number
   ctrlKey: boolean
   metaKey: boolean
   altKey: boolean
@@ -159,14 +212,8 @@ export function acceleratorFromKeyStroke(stroke: KeyStroke, platform: Platform):
   const modifierCodes = /^(Control|Meta|Alt|Shift|OS)(Left|Right)?$/
   if (modifierCodes.test(stroke.code)) return { status: "pending" }
 
-  let key: string | undefined = CODE_TO_KEY[stroke.code]
-  if (!key) {
-    const letter = /^Key([A-Z])$/.exec(stroke.code)
-    const digit = /^Digit([0-9])$/.exec(stroke.code)
-    const numpad = /^Numpad([0-9])$/.exec(stroke.code)
-    const fn = /^F([1-9]|1[0-9]|2[0-4])$/.exec(stroke.code)
-    key = letter?.[1] ?? digit?.[1] ?? (numpad ? `num${numpad[1]}` : undefined) ?? fn?.[0]
-  }
+  const byKeyCode = platform !== "mac" && stroke.keyCode && stroke.keyCode !== 229
+  const key = byKeyCode ? keyFromKeyCode(stroke.keyCode!) : keyFromCode(stroke.code)
   if (!key) return { status: "invalid", reason: "That key can't be used in a shortcut." }
 
   const modifiers: Modifier[] = []
