@@ -130,6 +130,14 @@ function AppSidebar({
           detail={state.ai.ready ? "Ready" : "Needs setup"}
           onClick={() => onNavigate("settings")}
         />
+        {state.accessibility === "missing" ? (
+          <StatusRow
+            tone="warn"
+            label="Accessibility"
+            detail="Not allowed"
+            onClick={() => polish.requestAccessibility()}
+          />
+        ) : null}
         <label className="flex h-8 cursor-pointer items-center justify-between gap-2 rounded-md px-2 text-xs/relaxed text-sidebar-foreground hover:bg-sidebar-accent">
           <span>{state.shortcutsPaused ? "Shortcuts paused" : "Shortcuts on"}</span>
           <Switch size="sm" checked={!state.shortcutsPaused} onCheckedChange={(on) => polish.setPaused(!on)} />

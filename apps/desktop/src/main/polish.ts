@@ -3,8 +3,10 @@ import { livePrompts, preserveSurroundingWhitespace, type Prompt } from "@polish
 
 import { aiStatus, PolishError, rewriteText } from "./engines"
 import {
+  accessibilityStatus,
   captureSelection,
   pasteClipboard,
+  requestAccessibility,
   restoreClipboard,
   type ClipboardSnapshot,
 } from "./selection"
@@ -41,10 +43,21 @@ function aiReadyOrPrompt(): boolean {
   return ready
 }
 
+/**
+ * Without Accessibility, macOS drops the copy keystroke without a word and
+ * the person would only hear "Select some text first." Say what is wrong.
+ */
+function accessibilityOrPrompt(): boolean {
+  if (accessibilityStatus() !== "missing") return true
+  setStatus("error", "Polish needs Accessibility to copy and paste. Allow it in System Settings.")
+  requestAccessibility()
+  return false
+}
+
 /** Run by a prompt's own shortcut: the selection is still in the focused app. */
 export async function polishWithShortcut(promptId: string) {
   const prompt = findPrompt(promptId)
-  if (!prompt || busy || !aiReadyOrPrompt()) return
+  if (!prompt || busy || !accessibilityOrPrompt() || !aiReadyOrPrompt()) return
   busy = true
   try {
     const { text, previous } = await captureSelection(prompt.shortcut)
@@ -67,7 +80,7 @@ export async function polishWithShortcut(promptId: string) {
 let pending: { text: string; previous: ClipboardSnapshot } | null = null
 
 export async function openPicker() {
-  if (busy || !aiReadyOrPrompt()) return
+  if (busy || !accessibilityOrPrompt() || !aiReadyOrPrompt()) return
   busy = true
   let opened = false
   try {
