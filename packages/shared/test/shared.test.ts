@@ -4,6 +4,7 @@ import { test } from "node:test"
 import {
   acceleratorFromKeyStroke,
   canonicalAccelerator,
+  codeForKey,
   DEFAULT_PROMPTS,
   DEFAULT_SETTINGS,
   formatAccelerator,
@@ -44,6 +45,16 @@ test("records keystrokes by physical key, Ctrl and ⌘ both as CommandOrControl"
   })
   assert.deepEqual(acceleratorFromKeyStroke(stroke("ShiftLeft", { shiftKey: true }), "windows"), { status: "pending" })
   assert.equal(acceleratorFromKeyStroke(stroke("KeyA"), "windows").status, "invalid")
+})
+
+test("finds the physical key an accelerator ends on, the recorder's inverse", () => {
+  for (const code of ["KeyQ", "Digit1", "Numpad7", "F5", "Space", "ArrowUp", "Backquote", "Slash", "Enter"]) {
+    const recorded = acceleratorFromKeyStroke(stroke(code, { metaKey: true }), "mac")
+    assert.equal(recorded.status, "done")
+    if (recorded.status === "done") assert.equal(codeForKey(recorded.accelerator.split("+").pop()!), code)
+  }
+  assert.equal(codeForKey("Plus"), "Equal")
+  assert.equal(codeForKey("Nope"), null)
 })
 
 test("formats per platform", () => {

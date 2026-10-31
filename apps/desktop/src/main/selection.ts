@@ -1,4 +1,4 @@
-import { clipboard, ClipboardItem, systemPreferences } from "electron"
+import { clipboard, ClipboardItem, shell, systemPreferences } from "electron"
 import { randomUUID } from "node:crypto"
 import { parseAccelerator } from "@polish/shared"
 import { uIOhook, UiohookKey } from "uiohook-napi"
@@ -127,6 +127,28 @@ export function accessibilityStatus(): "granted" | "missing" | "not-needed" {
   return systemPreferences.isTrustedAccessibilityClient(false) ? "granted" : "missing"
 }
 
+/**
+ * Adds Polish to the Accessibility list and opens that pane. macOS shows its
+ * own prompt only the first time an app asks, so asking alone would do
+ * nothing on every later click.
+ */
 export function requestAccessibility() {
-  if (isMac) systemPreferences.isTrustedAccessibilityClient(true)
+  if (!isMac || systemPreferences.isTrustedAccessibilityClient(true)) return
+  void shell.openExternal("x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+}
+
+/**
+ * Nothing announces the person flipping the switch in System Settings, so
+ * the status is checked every couple of seconds until it is granted.
+ */
+export function watchAccessibility(onChange: () => void) {
+  if (!isMac) return
+  let last = accessibilityStatus()
+  const timer = setInterval(() => {
+    const now = accessibilityStatus()
+    if (now === last) return
+    last = now
+    onChange()
+  }, 2000)
+  timer.unref()
 }

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Keyboard, X } from "lucide-react"
-import { acceleratorFromKeyStroke, type Platform } from "@polish/shared"
+import { acceleratorFromKeyStroke, type Platform, type RecordResult } from "@polish/shared"
 
 import { Button } from "@/components/ui/button"
 import { Shortcut } from "@/components/kbd"
@@ -36,6 +36,21 @@ export function ShortcutRecorder({
   }, [recording])
   useEffect(() => () => polish.setRecording(false), [])
 
+  function take(result: RecordResult) {
+    if (result.status === "invalid") setHint(result.reason)
+    if (result.status === "done") {
+      onChange(result.accelerator)
+      setRecording(false)
+      setHint(null)
+    }
+  }
+
+  // On macOS the main process also reports each key by position: the page
+  // never sees some chords (⌘⇧& on a French keyboard).
+  const latestTake = useRef(take)
+  latestTake.current = take
+  useEffect(() => (recording ? polish.onRecorded((result) => latestTake.current(result)) : undefined), [recording])
+
   const message = hint ?? (!recording ? error : undefined)
 
   return (
@@ -54,13 +69,7 @@ export function ShortcutRecorder({
             if (!recording) return
             event.preventDefault()
             if (event.key === "Escape") return setRecording(false)
-            const result = acceleratorFromKeyStroke(event.nativeEvent, platform)
-            if (result.status === "invalid") setHint(result.reason)
-            if (result.status === "done") {
-              onChange(result.accelerator)
-              setRecording(false)
-              setHint(null)
-            }
+            take(acceleratorFromKeyStroke(event.nativeEvent, platform))
           }}
           className={cn(
             // The boilerplate Input's box (mira: h-7, xs text), so it sits in a form unnoticed.

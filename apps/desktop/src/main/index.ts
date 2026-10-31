@@ -7,6 +7,7 @@ import { onCliStatusChange, refreshCliStatus } from "./engines/claude-cli"
 import { trayIcon } from "./icon"
 import { appState, broadcastState, registerIpc } from "./ipc"
 import { openPicker, polishWithShortcut } from "./polish"
+import { watchAccessibility } from "./selection"
 import { applyShortcuts, isPaused, onShortcutsToggled, setPaused } from "./shortcuts"
 import { store } from "./store"
 import { checkForUpdates, installUpdate, onUpdateStatusChange, startUpdater, updateStatus } from "./updater"
@@ -68,6 +69,7 @@ async function start() {
   onShortcutsToggled(refreshAll)
   onCliStatusChange(refreshAll)
   onUpdateStatusChange(refreshAll)
+  watchAccessibility(refreshAll)
 
   applyShortcuts()
   tray = new Tray(trayIcon())
