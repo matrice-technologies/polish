@@ -66,9 +66,17 @@ export async function polishWithShortcut(promptId: string) {
       return
     }
     await polishAndPaste(prompt, text, previous, prompt.shortcut)
+  } catch (error) {
+    unexpected(error)
   } finally {
     busy = false
   }
+}
+
+/** A press must always answer: an error nobody sees looks like a dead shortcut. */
+function unexpected(error: unknown) {
+  console.error(error)
+  setStatus("error", "Something went wrong. Try again.")
 }
 
 /* ------------------------------------------------------------- picker ---- */
@@ -92,6 +100,8 @@ export async function openPicker() {
     pending = { text, previous }
     showPicker()
     opened = true
+  } catch (error) {
+    unexpected(error)
   } finally {
     // Once open, the picker holds `busy` until a prompt is chosen or it is dismissed.
     if (!opened) busy = false

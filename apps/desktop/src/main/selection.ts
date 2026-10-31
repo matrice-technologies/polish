@@ -20,24 +20,37 @@ const COMMAND = isMac ? UiohookKey.Meta : UiohookKey.Ctrl
 /** Every representation that was on the clipboard (text, HTML, RTF, images…). */
 export type ClipboardSnapshot = ClipboardItem[]
 
+/**
+ * What can be read of the clipboard. An item with no readable format — an
+ * empty clipboard after a restart, or only formats Chromium doesn't know —
+ * is dropped: a ClipboardItem needs at least one, and there is nothing of it
+ * to put back anyway. Reading must never stop the copy itself.
+ */
 export async function snapshotClipboard(): Promise<ClipboardSnapshot> {
-  // Materialise every payload now: items from read() may resolve lazily
-  // against the live clipboard, which is about to be overwritten.
-  const items = await clipboard.read()
-  return Promise.all(
-    items.map(async (item) => {
-      const entries = await Promise.all(
-        item.types.map(async (type) => {
-          try {
-            return [[type, await item.getType(type)] as const]
-          } catch {
-            return []
-          }
-        }),
-      )
-      return new ClipboardItem(Object.fromEntries(entries.flat()))
-    }),
-  )
+  try {
+    // Materialise every payload now: items from read() may resolve lazily
+    // against the live clipboard, which is about to be overwritten.
+    const items = await clipboard.read()
+    const snapshot = await Promise.all(
+      items.map(async (item) => {
+        const entries = await Promise.all(
+          item.types.map(async (type) => {
+            try {
+              return [[type, await item.getType(type)] as const]
+            } catch {
+              return []
+            }
+          }),
+        )
+        const formats = entries.flat()
+        return formats.length ? new ClipboardItem(Object.fromEntries(formats)) : null
+      }),
+    )
+    return snapshot.filter((item) => item !== null)
+  } catch (error) {
+    console.error("Could not read the clipboard", error)
+    return []
+  }
 }
 
 export async function restoreClipboard(snapshot: ClipboardSnapshot) {
