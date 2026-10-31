@@ -190,6 +190,21 @@ export function acceleratorFromKeyStroke(stroke: KeyStroke, platform: Platform):
   return { status: "done", accelerator }
 }
 
+/**
+ * The `KeyboardEvent.code` of the key an accelerator ends on, the inverse of
+ * what the recorder does: "Q" → "KeyQ", "1" → "Digit1". Lets the desktop app
+ * find the key's place on the keyboard (macOS hot keys) and what it is
+ * labelled on the person's layout.
+ */
+export function codeForKey(key: string): string | null {
+  if (/^[A-Z]$/.test(key)) return `Key${key}`
+  if (/^[0-9]$/.test(key)) return `Digit${key}`
+  if (/^num[0-9]$/.test(key)) return `Numpad${key.slice(3)}`
+  if (/^F\d+$/.test(key)) return key
+  if (key === "Plus") return "Equal"
+  return Object.entries(CODE_TO_KEY).find(([, k]) => k === key)?.[0] ?? null
+}
+
 const MAC_SYMBOLS: Record<Modifier, string> = {
   CommandOrControl: "⌘",
   Control: "⌃",

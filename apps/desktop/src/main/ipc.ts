@@ -170,7 +170,7 @@ export function registerIpc() {
     }
   })
 
-  ipcMain.on(IPC.setRecording, (_event, recording: boolean) => setRecording(recording))
+  ipcMain.on(IPC.setRecording, (event, recording: boolean) => setRecording(recording, event.sender))
   ipcMain.on(IPC.setPaused, (_event, paused: boolean) => setPaused(paused))
   ipcMain.on(IPC.requestAccessibility, () => requestAccessibility())
   ipcMain.handle(IPC.checkForUpdates, () => checkForUpdates())

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron"
+import type { RecordResult } from "@polish/shared"
 
 import { IPC, type AppState, type HudStatus, type PolishApi } from "../common/types"
 
@@ -30,6 +31,7 @@ const api: PolishApi = {
   cliCancelLogin: () => ipcRenderer.send(IPC.cliCancelLogin),
   tryPrompt: (id, text) => ipcRenderer.invoke(IPC.tryPrompt, id, text),
   setRecording: (recording) => ipcRenderer.send(IPC.setRecording, recording),
+  onRecorded: (listener) => subscribe<[RecordResult]>(IPC.recorded, listener),
   setPaused: (paused) => ipcRenderer.send(IPC.setPaused, paused),
   requestAccessibility: () => ipcRenderer.send(IPC.requestAccessibility),
   checkForUpdates: () => ipcRenderer.invoke(IPC.checkForUpdates),

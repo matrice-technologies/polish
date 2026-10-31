@@ -1,4 +1,4 @@
-import type { Platform, Prompt, PromptInput, SyncedSettings } from "@polish/shared"
+import type { Platform, Prompt, PromptInput, RecordResult, SyncedSettings } from "@polish/shared"
 
 import type { AiSettings, AiStatus, ProviderId } from "./providers"
 
@@ -90,6 +90,8 @@ export interface PolishApi {
   tryPrompt(id: string, text: string): Promise<Result<string>>
   /** Suspends global shortcuts while a shortcut field is recording. */
   setRecording(recording: boolean): void
+  /** On macOS, keys read by position while recording, including chords the page never sees. */
+  onRecorded(listener: (result: RecordResult) => void): () => void
   setPaused(paused: boolean): void
   requestAccessibility(): void
   checkForUpdates(): Promise<void>
@@ -129,6 +131,7 @@ export const IPC = {
   cliCancelLogin: "cli:cancel-login",
   tryPrompt: "prompt:try",
   setRecording: "shortcuts:recording",
+  recorded: "shortcuts:recorded",
   setPaused: "shortcuts:paused",
   requestAccessibility: "accessibility:request",
   checkForUpdates: "update:check",
